@@ -432,24 +432,48 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const TOUR_STEPS = [
             {
-                target: '#home-new-chat-btn',
+                target: '#add-chat-btn',
                 title: 'Empieza aquí',
                 description: 'Haz clic aquí para iniciar una nueva conversación con K-I-B-O sobre cualquier tema.'
             },
             {
-                target: '.nav-card.chats',
+                target: '.chat-list',
                 title: 'Tu Historial',
                 description: 'Aquí se guardarán todas tus conversaciones anteriores para que puedas consultarlas cuando quieras.'
             },
             {
                 target: '.nav-card.configuracion',
-                title: 'Personalízalo',
+                title: 'Configuración',
                 description: 'En configuración puedes cambiar tu avatar, contraseña y ajustar tus preferencias.'
             },
             {
                 target: '#trophy-display',
                 title: 'Gana Logros',
                 description: '¡Cuanto más aprendas y chatees, desbloquearás nuevos trofeos aquí!'
+            },
+            {
+                target: '#message-input',
+                title: 'Escribe tu Mensaje',
+                description: 'Usa este cuadro para escribir tus preguntas, tareas o cualquier consulta que tengas para K-I-B-O.',
+                placement: 'top'
+            },
+            {
+                target: '#attach-file-btn',
+                title: 'Adjuntar Archivos',
+                description: 'Presiona este icono para subir imágenes, documentos o cualquier otro archivo relevante a tu consulta.',
+                placement: 'top'
+            },
+            {
+                target: '#send-audio-btn',
+                title: 'Enviar Audio',
+                description: 'Si prefieres hablar, presiona y mantén para grabar tu voz. K-I-B-O transcribirá y responderá.',
+                placement: 'top'
+            },
+            {
+                target: '#send-btn',
+                title: '¡A Enviar!',
+                description: 'Una vez que termines de escribir, pulsa este botón para enviar tu mensaje.',
+                placement: 'top'
             }
         ];
         let currentTourStep = 0;
@@ -516,9 +540,33 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             const step = TOUR_STEPS[index];
-            const targetEl = document.querySelector(step.target);
+            let targetEl = document.querySelector(step.target);
             const card = document.getElementById('tour-card');
             const arrow = card ? card.querySelector('.tour-arrow') : null;
+
+            // Lógica de navegación forzada para el paso 4 y siguientes (índice 3 en adelante)
+            if (index >= 3) {
+                const chatsLink = document.querySelector('.nav-card.chats');
+                if (chatsLink && !chatsLink.classList.contains('active-nav')) {
+                    chatsLink.click();
+                    setTimeout(() => {
+                        // Re-intenta obtener el target después de la navegación
+                        targetEl = document.querySelector(step.target);
+                        if (targetEl) {
+                            mostrarPaso(index);
+                        } else {
+                            // Si el target sigue sin aparecer (ej. #trophy-display), pasamos al siguiente
+                            if (index < TOUR_STEPS.length - 1) {
+                                currentTourStep++;
+                                mostrarPaso(currentTourStep);
+                            } else {
+                                finalizarTour();
+                            }
+                        }
+                    }, 300); // 300ms de espera para que la interfaz se cargue
+                    return;
+                }
+            }
 
             if (!targetEl || !card) {
                 if (index < TOUR_STEPS.length - 1) mostrarPaso(index + 1);
@@ -543,22 +591,34 @@ document.addEventListener('DOMContentLoaded', async () => {
             const cardRect = card.getBoundingClientRect();
             const margin = 15;
 
-            let top = rect.top + (rect.height / 2) - (cardRect.height / 2);
-            let left = rect.right + margin;
-            let arrowClass = 'left';
+            let top, left, arrowClass;
+            const isRightSidebar = targetEl.closest('.sidebar-right');
+            const forcedPlacement = step.placement;
 
-            if (left + cardRect.width > window.innerWidth) {
+            if (isRightSidebar) {
+                // Posicionamiento para el sidebar derecho (#trophy-display)
                 left = rect.left - cardRect.width - margin;
+                top = rect.top + (rect.height / 2) - (cardRect.height / 2);
                 arrowClass = 'right';
+            } else if (forcedPlacement === 'top') {
+                // Posicionamiento para la barra de mensajes (bottom center)
+                left = rect.left + (rect.width / 2) - (cardRect.width / 2);
+                top = rect.top - cardRect.height - margin;
+                arrowClass = 'bottom';
+            } else {
+                // Lógica de posición por defecto (izquierda/centro)
+                left = rect.right + margin;
+                top = rect.top + (rect.height / 2) - (cardRect.height / 2);
+                arrowClass = 'left';
+
+                if (left + cardRect.width > window.innerWidth) {
+                    left = rect.left - cardRect.width - margin;
+                    arrowClass = 'right';
+                }
             }
 
-            if (top + cardRect.height > window.innerHeight) {
-                top = rect.top - cardRect.height - margin;
-                if (left < 0 || left + cardRect.width > window.innerWidth) {
-                    left = rect.left + (rect.width / 2) - (cardRect.width / 2);
-                }
-                arrowClass = 'bottom';
-            }
+            if (top < 10) top = 10;
+            if (top + cardRect.height > window.innerHeight - 10) top = window.innerHeight - cardRect.height - 10;
 
             card.style.top = `${top}px`;
             card.style.left = `${left}px`;
@@ -1614,7 +1674,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <div class="code-header">
                             <div class="lang-tabs">
                                 <button class="tab active">
-                                    <i class="${iconClass}"></i> 
+                                    <i class="${iconClass}"></i> 
                                     <span>${language}</span>
                                 </button>
                             </div>
@@ -1939,7 +1999,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // Trofeos
         const TROPHY_GOALS = {
             5: { id: 't1', emoji: '👍' },
             10: { id: 't2', emoji: '🧠' },

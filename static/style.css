@@ -3276,6 +3276,7 @@ body.role-padre .historial-dot {
 .hidden {
     display: none !important;
 }
+
 #toast-container {
     position: fixed;
     bottom: 20px;
