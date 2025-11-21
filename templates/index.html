@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>K-I-B-O</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/Icon.png') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"
+        defer></script>
+</head>
+
+<body>
+    <div class="panel expanded">
+
+        <div class="active-indicator"></div>
+        <div class="panel-bg"></div>
+
+        <div class="window-controls">
+            <div class="btn btn-red"></div>
+            <div class="btn btn-yellow"></div>
+            <div class="btn btn-green"></div>
+        </div>
+
+        <div class="header">
+            <div class="header-left">
+                <div class="avatar-wrap">
+                    <div class="avatar-border"></div>
+                    <img class="avatar-img" src="{{ url_for('static', filename='images/VisualC.png') }}" alt="avatar"
+                        id="user-avatar" />
+                    <div class="avatar-status"></div>
+                </div>
+                <div class="user-meta">
+                    <div class="user-name" id="user-name">Cargando...</div>
+                    <div class="user-role" id="user-role">...</div>
+                </div>
+            </div>
+            <div class="header-action" id="toggle-sidebar-btn">
+                <div class="action-bg"></div>
+                <div class="action-mark">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="search-card">
+            <div class="search-row">
+                <div class="search-icon-placeholder">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </div>
+                <div class="search-text">Search</div>
+            </div>
+        </div>
+
+        <div class="nav-container">
+            <div class="nav-card inicio" data-target="inicio">
+                <div class="nav-card__icon"><i class="fa-solid fa-house"></i></div>
+                <div class="nav-card__label">Inicio</div>
+                <div class="nav-card__ornament"><i class="fa-solid fa-sliders"></i></div>
+            </div>
+            <div class="nav-card chats" data-target="chats" id="chats-link">
+                <div class="nav-card__icon"><i class="fa-solid fa-comment"></i></div>
+                <div class="nav-card__label">Chats</div>
+                <div class="nav-card__pill">0</div>
+                <div class="nav-card__ornament" id="add-chat-btn"><i class="fa-solid fa-plus"></i></div>
+            </div>
+            <div class="nav-card base-datos" data-target="database">
+                <div class="nav-card__icon"><i class="fa-solid fa-database"></i>
+                    <div class="nav-card__alert"></div>
+                </div>
+                <div class="nav-card__label">Base de Datos</div>
+                <div class="nav-card__pill">1</div>
+            </div>
+            <div class="nav-card algoritmos" data-target="algoritmos">
+                <div class="nav-card__icon"><i class="fa-solid fa-code-branch"></i></div>
+                <div class="nav-card__label">Algoritmos</div>
+                <div class="nav-card__ornament special"><i class="fa-solid fa-plus"></i></div>
+            </div>
+            <div class="nav-card configuracion" data-target="configuracion">
+                <div class="nav-card__icon"><i class="fa-solid fa-cog"></i>
+                    <div class="nav-card__alert"></div>
+                </div>
+                <div class="nav-card__label">Configuración</div>
+                <div class="nav-card__pill">9</div>
+            </div>
+        </div>
+
+        <div class="historial-title">
+            <div class="historial-text">Historial de Chats</div>
+            <div class="historial-see">Ver todos</div>
+            <div class="historial-dot"><i class="fa-solid fa-eye"></i></div>
+        </div>
+
+        <div class="chat-list"></div>
+
+        <div class="nav-card logout-button-container" id="logout-btn">
+            <div class="nav-card__icon"><i class="fa-solid fa-right-from-bracket"></i></div>
+            <div class="nav-card__label">Cerrar Sesión</div>
+        </div>
+    </div>
+
+    <main class="main-content">
+        <section id="inicio" class="content-section">
+            <div class="welcome-header">
+                <h2 id="welcome-message">¡Bienvenido de nuevo!</h2>
+                <p>Aquí tienes un resumen de tu actividad reciente. ¿Qué te gustaría hacer hoy?</p>
+            </div>
+            <div class="dashboard-grid">
+                <div class="dashboard-main-column">
+                    <div class="dashboard-card">
+                        <div class="card-header"><i class="fa-solid fa-bolt-lightning"></i>
+                            <h3>Acciones Rápidas</h3>
+                        </div>
+                        <div class="card-body">
+                            <button class="quick-action-btn" id="home-new-chat-btn"><i
+                                    class="fa-solid fa-plus"></i><span>Crear Nuevo Chat</span></button>
+                            <button class="quick-action-btn" id="home-go-to-db-btn"><i
+                                    class="fa-solid fa-database"></i><span>Ir a Base de Datos</span></button>
+                        </div>
+                    </div>
+                    <div class="dashboard-card">
+                        <div class="card-header"><i class="fa-solid fa-clock-rotate-left"></i>
+                            <h3>Chats Recientes</h3>
+                        </div>
+                        <div class="card-body" id="recent-chats-container">
+                            <p class="empty-state">Aún no hay chats recientes.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="dashboard-side-column">
+                    <div class="dashboard-card">
+                        <div class="card-header"><i class="fa-solid fa-chart-pie"></i>
+                            <h3>Tus Estadísticas</h3>
+                        </div>
+                        <div class="card-body stats-body">
+                            <div class="stat-item"><span class="stat-value" id="stats-total-chats">0</span><span
+                                    class="stat-label">Chats Totales</span></div>
+                            <div class="stat-item"><span class="stat-value" id="stats-unlocked-trophies">0</span><span
+                                    class="stat-label">Logros Desbloqueados</span></div>
+                        </div>
+                    </div>
+                    <div class="dashboard-card mission-dashboard-card">
+                        <div class="card-header"><i class="fa-solid fa-bullseye"></i>
+                            <h3>Próxima Misión</h3>
+                        </div>
+                        <div class="card-body" id="next-mission-card-body">
+                            <p>¡Buen trabajo! Has completado todas las misiones por ahora 🎉</p>
+                        </div>
+                    </div>
+                    <div class="dashboard-card tip-card">
+                        <div class="card-header"><i class="fa-solid fa-lightbulb"></i>
+                            <h3>Sabías que...</h3>
+                        </div>
+                        <div class="card-body" id="tip-of-the-day-body">
+                            <p>Puedes expandir y contraer el panel lateral haciendo clic en la flecha verde.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="chats" class="content-section">
+            <div class="chat-interface">
+                <header class="chat-header">
+                    <div class="header-left"><button class="new-chat-btn"><i class="fa-solid fa-plus"></i> New
+                            chat</button><button class="icon-btn"><i class="fa-solid fa-clock-rotate-left"></i></button>
+                    </div>
+                    <div class="header-right"><i class="fa-solid fa-wand-magic-sparkles"></i><label
+                            class="switch"><input type="checkbox" checked><span class="slider round"></span></label><i
+                            class="fa-regular fa-file-lines"></i><i class="fa-regular fa-bookmark"></i><i
+                            class="fa-solid fa-link"></i></div>
+                </header>
+                <div class="chat-area" id="chat-messages"></div>
+                <footer class="chat-input-area">
+                    <div class="input-wrapper">
+                        <textarea id="message-input" placeholder="Type a new message here"></textarea>
+                        <div class="input-actions">
+                            <button class="icon-btn" id="attach-file-btn"><i class="fa-solid fa-paperclip"></i></button>
+                            <button class="icon-btn"><i class="fa-solid fa-face-smile"></i></button>
+                            <button class="icon-btn" id="send-audio-btn"><i class="fa-solid fa-microphone"></i></button>
+                            <button class="send-btn" id="send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+                        </div>
+                    </div>
+                </footer>
+            </div>
+        </section>
+
+        <section id="database" class="content-section"></section>
+
+        <section id="algoritmos" class="content-section">
+            <div class="algoritmos-container">
+                <div class="algoritmos-editor-panel">
+                    <div class="editor-header">
+                        <input type="text" id="algoritmo-title" placeholder="Título del Algoritmo..."
+                            value="{{ algoritmo_titulo }}">
+                        <button id="guardar-algoritmo-btn" class="save-btn">
+                            <i class="fa-solid fa-save"></i> Guardar Cambios
+                        </button>
+                    </div>
+                    <textarea id="algoritmo-description"
+                        placeholder="Añade una breve descripción de lo que hace tu algoritmo...">{{ algoritmo_descripcion }}</textarea>
+                    <div class="code-editor-container">
+                        <div class="code-editor-header">
+                            <span><i class="fa-brands fa-python"></i> {{ algoritmo_titulo }}</span>
+                        </div>
+                        <textarea id="algoritmo-code-input"
+                            placeholder="Escribe tu código Python aquí...">{{ algoritmo_codigo }}</textarea>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="configuracion" class="content-section">
+            <div class="settings-container">
+                <h2>Configuración de la Cuenta</h2>
+                <div class="settings-card">
+                    <h3>Perfil de Usuario</h3>
+                    <div class="profile-settings-header">
+                        <div class="avatar-settings-container">
+                            <img src="{{ url_for('static', filename='images/VisualC.png') }}" id="settings-avatar"
+                                alt="Avatar">
+                            <label for="avatar-upload-input" class="edit-avatar-button" title="Cambiar avatar"><i
+                                    class="fa-solid fa-camera"></i></label>
+                            <input type="file" id="avatar-upload-input" accept="image/*" style="display: none;">
+                        </div>
+                        <div class="profile-inputs">
+                            <div class="settings-input-group">
+                                <label for="settings-name-input">Nombre de Usuario</label>
+                                <input type="text" id="settings-name-input" placeholder="Tu nombre">
+                            </div>
+                            <div class="settings-input-group">
+                                <label for="settings-email-input">Correo Electrónico</label>
+                                <input type="email" id="settings-email-input" placeholder="tu@correo.com">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-actions"><button id="save-profile-btn" class="btn-primary">Guardar Cambios</button>
+                    </div>
+                </div>
+                <div class="settings-card">
+                    <h3>Seguridad</h3>
+                    <div class="settings-row"><span>Cambiar Contraseña</span><button id="change-password-btn"
+                            class="btn-secondary">Cambiar</button></div>
+                </div>
+                <div class="settings-card danger-zone">
+                    <h3>Zona de Peligro</h3>
+                    <div class="settings-row">
+                        <div>
+                            <h4>Eliminar Cuenta</h4>
+                            <p>Esta acción es permanente y no se puede deshacer.</p>
+                        </div>
+                        <button id="delete-account-btn" class="btn-danger">Eliminar</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <aside class="sidebar-right">
+        <div class="window-controls">
+            <div class="btn btn-red"></div>
+            <div class="btn btn-yellow"></div>
+            <div class="btn btn-green"></div>
+        </div>
+        <div class="profile-section">
+            <div class="profile-avatar-container"><img src="{{ url_for('static', filename='images/Profesor.jpg') }}"
+                    alt="Avatar del profesor" class="profile-avatar">
+                <div class="status-dot"></div>
+            </div>
+            <h2 class="profile-name">Diego Rojas Sihuay</h2>
+            <p class="profile-role">Profesor</p>
+        </div>
+        <div class="achievements-grid" id="trophy-display">
+            <div class="achievement-slot">❓</div>
+            <div class="achievement-slot">❓</div>
+            <div class="achievement-slot">❓</div>
+            <div class="achievement-slot">❓</div>
+            <div class="achievement-slot">❓</div>
+            <div class="achievement-slot">❓</div>
+            <div class="achievement-slot">❓</div>
+            <div class="achievement-slot">❓</div>
+            <div class="achievement-slot">❓</div>
+        </div>
+        <div class="mission-card" id="next-goal">
+            <h3>¡Siguiente misión!</h3>
+            <p>Escribe 5 mensajes más para ganar el trofeo 🏆</p>
+        </div>
+        <div class="ai-graphic-container"><img src="{{ url_for('static', filename='images/MenteIA.gif') }}"
+                alt="Animación de esfera AI"></div>
+    </aside>
+
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+
+    <script type="module" src="{{ url_for('static', filename='script.js') }}"></script>
+
+    <div class="modal-overlay hidden" id="add-chat-modal-overlay">
+        <div class="modal-content">
+            <h3>Crear un nuevo chat</h3>
+            <p>Por favor, ingresa un nombre para la conversación.</p>
+            <input type="text" id="new-chat-name-input" placeholder="Ej: Proyecto KIBO">
+            <div class="modal-actions">
+                <button class="modal-button-cancel" id="cancel-chat-btn">Cancelar</button>
+                <button class="modal-button-confirm" id="confirm-chat-btn">Crear Chat</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="tour-overlay" class="tour-overlay hidden"></div>
+    <div id="tour-card" class="tour-card hidden">
+        <div class="tour-header">
+            <span id="tour-step-count">Paso 1 de 4</span>
+            <button id="tour-skip-btn" class="tour-close-btn"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <h3 id="tour-title">Título del paso</h3>
+        <p id="tour-desc">Descripción de lo que hace este elemento.</p>
+        <div class="tour-footer">
+            <button id="tour-prev-btn" class="btn-secondary small" style="display:none;">Atrás</button>
+            <button id="tour-next-btn" class="btn-primary small">Siguiente</button>
+        </div>
+        <div class="tour-arrow"></div>
+    </div>
+</body>
+
+</html>

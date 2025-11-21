@@ -1,0 +1,16 @@
+python -m venv venv  *Con la version de python 3.11.9*
+
+.\venv\Scripts\activate
+
+pip install flask firebase-admin requests pandas datasets nltk tensorflow scikit-learn gensim rank-bm25 joblib
+
+pip install faster-whisper  
+
+pip install black
+
+pip install spacy
+
+python -m spacy download es_core_news_md
+
+python app.py
+  

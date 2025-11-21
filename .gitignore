@@ -1,0 +1,9 @@
+# Entorno virtual de Python
+/venv
+
+# Directorios de caché de Python
+/__pycache__
+*.pyc
+
+# Archivos de datos sensibles (Firebase Service Account)
+tu-service-account.json

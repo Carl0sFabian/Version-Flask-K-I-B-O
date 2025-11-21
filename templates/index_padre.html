@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>K-I-B-O | Portal de Padres</title>
+
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/Icon.png') }}" />
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"
+        defer></script>
+</head>
+
+<body class="role-padre">
+    <div class="panel expanded">
+        <div class="active-indicator"></div>
+        <div class="panel-bg"></div>
+
+        <div class="window-controls">
+            <div class="btn btn-red"></div>
+            <div class="btn btn-yellow"></div>
+            <div class="btn btn-green"></div>
+        </div>
+
+        <div class="header">
+            <div class="header-left">
+                <div class="avatar-wrap">
+                    <div class="avatar-border"></div>
+                    <img class="avatar-img" src="{{ url_for('static', filename='images/VisualC.png') }}" alt="avatar"
+                        id="user-avatar" />
+                    <div class="avatar-status"></div>
+                </div>
+                <div class="user-meta">
+                    <div class="user-name" id="user-name">Cargando...</div>
+                    <div class="user-role" id="user-role">Padre/Tutor</div>
+                </div>
+            </div>
+            <div class="header-action" id="toggle-sidebar-btn">
+                <div class="action-bg"></div>
+                <div class="action-mark">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="search-card">
+            <div class="search-row">
+                <div class="search-icon-placeholder">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </div>
+                <div class="search-text">Buscar...</div>
+            </div>
+        </div>
+
+        <div class="nav-container">
+            <div class="nav-card inicio active-nav" data-target="inicio">
+                <div class="nav-card__icon"><i class="fa-solid fa-house"></i></div>
+                <div class="nav-card__label">Inicio</div>
+                <div class="nav-card__ornament"><i class="fa-solid fa-sliders"></i></div>
+            </div>
+
+            <div class="nav-card chats" data-target="chats" id="chats-link">
+                <div class="nav-card__icon"><i class="fa-solid fa-comment"></i></div>
+                <div class="nav-card__label">Chats</div>
+                <div class="nav-card__pill">0</div>
+                <div class="nav-card__ornament" id="add-chat-btn"><i class="fa-solid fa-plus"></i></div>
+            </div>
+
+            <div class="nav-card base-datos" data-target="database">
+                <div class="nav-card__icon">
+                    <i class="fa-solid fa-child-reaching"></i>
+                    <div class="nav-card__alert"></div>
+                </div>
+                <div class="nav-card__label">Mis Hijos</div>
+                <div class="nav-card__pill">!</div>
+            </div>
+
+            <div class="nav-card configuracion" data-target="configuracion">
+                <div class="nav-card__icon">
+                    <i class="fa-solid fa-cog"></i>
+                </div>
+                <div class="nav-card__label">Configuración</div>
+            </div>
+        </div>
+
+        <div class="historial-title">
+            <div class="historial-text">Historial</div>
+            <div class="historial-see">Ver todos</div>
+            <div class="historial-dot"><i class="fa-solid fa-eye"></i></div>
+        </div>
+
+        <div class="chat-list"></div>
+
+        <div class="nav-card logout-button-container" id="logout-btn">
+            <div class="nav-card__icon"><i class="fa-solid fa-right-from-bracket"></i></div>
+            <div class="nav-card__label">Cerrar Sesión</div>
+        </div>
+    </div>
+
+    <main class="main-content">
+
+        <section id="inicio" class="content-section active">
+            <div class="welcome-header">
+                <h2 id="welcome-message">¡Bienvenido!</h2>
+                <p>Aquí tienes un resumen de la actividad reciente de tus hijos.</p>
+            </div>
+            <div class="dashboard-grid">
+                <div class="dashboard-main-column">
+                    <div class="dashboard-card">
+                        <div class="card-header"><i class="fa-solid fa-bolt-lightning"></i>
+                            <h3>Acciones Rápidas</h3>
+                        </div>
+                        <div class="card-body">
+                            <button class="quick-action-btn"
+                                onclick="document.querySelector('.nav-card[data-target=\'database\']').click()">
+                                <i class="fa-solid fa-child"></i><span>Ver Progreso de Hijos</span>
+                            </button>
+                            <button class="quick-action-btn"
+                                onclick="document.querySelector('.nav-card[data-target=\'configuracion\']').click()">
+                                <i class="fa-solid fa-user-gear"></i><span>Editar mi Perfil</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card">
+                        <div class="card-header">
+                            <i class="fa-solid fa-children"></i>
+                            <h3>Mis Hijos</h3>
+                        </div>
+
+                        <div class="card-body children-list-wrapper" id="children-list-container">
+                            <div class="loading-state" style="text-align: center; color: #7D96B3; padding: 20px;">
+                                <i class="fa-solid fa-circle-notch fa-spin"></i> Cargando lista de hijos...
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="dashboard-side-column">
+                    <div class="dashboard-card tip-card">
+                        <div class="card-header"><i class="fa-solid fa-lightbulb"></i>
+                            <h3>Consejo para Padres</h3>
+                        </div>
+                        <div class="card-body" id="tip-of-the-day-body">
+                            <p>Supervisar el progreso de tus hijos ayuda a mejorar su rendimiento escolar.</p>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card">
+                        <div class="card-header"><i class="fa-regular fa-calendar"></i>
+                            <h3>Hoy</h3>
+                        </div>
+                        <div class="card-body" style="text-align: center;">
+                            <h2 id="datetime-card-time" style="color: #0077FF; margin: 0;">--:--</h2>
+                            <p id="datetime-card-date" style="color: #7D96B3; margin: 5px 0 0 0;">--</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="chats" class="content-section">
+            <div class="chat-interface">
+                <header class="chat-header">
+                    <div class="header-left">
+                        <button class="icon-btn"><i class="fa-solid fa-bars"></i></button>
+                        <span style="font-weight: 600; color: #EBF0F5;">Vista de Chat</span>
+                    </div>
+                </header>
+
+                <div class="chat-area" id="chat-messages">
+                </div>
+
+                <footer class="chat-input-area">
+                    <div class="input-wrapper">
+                        <textarea id="message-input" placeholder="Escribe un mensaje..."></textarea>
+                        <div class="input-actions">
+                            <button class="icon-btn" id="attach-file-btn"><i class="fa-solid fa-paperclip"></i></button>
+                            <button class="icon-btn" id="send-audio-btn"><i class="fa-solid fa-microphone"></i></button>
+                            <button class="send-btn" id="send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+                        </div>
+                    </div>
+                </footer>
+            </div>
+        </section>
+
+        <section id="database" class="content-section">
+            <div class="dashboard-card loading-state" style="padding: 20px; text-align: center; color: #7D96B3;">
+                <i class="fa-solid fa-circle-notch fa-spin"></i> Inicializando módulo de familia...
+            </div>
+        </section>
+
+        <section id="configuracion" class="content-section">
+            <div class="settings-container">
+                <h2>Configuración de Cuenta</h2>
+                <div class="settings-card">
+                    <h3>Perfil del Tutor</h3>
+                    <div class="profile-settings-header">
+                        <div class="avatar-settings-container">
+                            <img src="{{ url_for('static', filename='images/VisualC.png') }}" id="settings-avatar"
+                                alt="Avatar">
+                            <label for="avatar-upload-input" class="edit-avatar-button"><i
+                                    class="fa-solid fa-camera"></i></label>
+                            <input type="file" id="avatar-upload-input" accept="image/*" style="display: none;">
+                        </div>
+                        <div class="profile-inputs">
+                            <div class="settings-input-group">
+                                <label for="settings-name-input">Nombre Completo</label>
+                                <input type="text" id="settings-name-input" placeholder="Nombre del padre/tutor">
+                            </div>
+                            <div class="settings-input-group">
+                                <label for="settings-email-input">Correo Electrónico</label>
+                                <input type="email" id="settings-email-input" disabled>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-actions">
+                        <button id="save-profile-btn" class="btn-primary">Guardar Cambios</button>
+                    </div>
+                </div>
+
+                <div class="settings-card">
+                    <h3>Seguridad</h3>
+
+                    <div class="settings-row">
+                        <span>Cambiar Contraseña</span>
+                        <button id="change-password-btn" class="btn-secondary">Cambiar</button>
+                    </div>
+
+                    <div class="modal-overlay hidden" id="change-password-modal-overlay">
+                        <div class="modal-content">
+                            <h3>Cambiar Contraseña</h3>
+                            <p>Ingresa tu nueva contraseña para actualizar la seguridad de tu cuenta.</p>
+
+                            <div class="settings-input-group">
+                                <label for="new-password-input">Nueva Contraseña</label>
+                                <input type="password" id="new-password-input" placeholder="Mínimo 6 caracteres"
+                                    required>
+                            </div>
+
+                            <div class="settings-input-group">
+                                <label for="confirm-password-input">Confirmar Contraseña</label>
+                                <input type="password" id="confirm-password-input"
+                                    placeholder="Confirma la nueva contraseña" required>
+                            </div>
+
+                            <div class="modal-actions">
+                                <button class="modal-button-cancel" id="cancel-password-change-btn">Cancelar</button>
+                                <button class="modal-button-confirm" id="confirm-password-change-btn">Actualizar
+                                    Contraseña</button>
+                            </div>
+
+                            <div id="password-error-message"
+                                style="color: #FF5E61; margin-top: 10px; display: none; font-size: 14px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-card danger-zone">
+                    <h3>Zona de Peligro</h3>
+                    <div class="settings-row">
+                        <div>
+                            <h4>Eliminar Cuenta</h4>
+                            <p>Esta acción es permanente y no se puede deshacer.</p>
+                        </div>
+                        <button id="delete-account-btn" class="btn-danger">Eliminar</button>
+                    </div>
+
+                    <div class="modal-overlay hidden" id="delete-account-modal-overlay">
+                        <div class="modal-content">
+                            <h3 style="color: #FF5E61;">⚠️ ¡Atención! Eliminar Cuenta</h3>
+                            <p>Estás a punto de eliminar tu cuenta de forma **permanente**.</p>
+                            <p style="color: #FF5E61; font-weight: 600;">Esta acción no se puede deshacer. ¿Estás
+                                absolutamente seguro/a de continuar?</p>
+
+                            <div class="modal-actions">
+                                <button class="modal-button-cancel" id="cancel-delete-btn">Cancelar</button>
+                                <button class="btn-danger" id="confirm-delete-btn">SÍ, Eliminar Permanentemente</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </section>
+    </main>
+
+    <aside class="sidebar-right">
+        <div class="window-controls">
+            <div class="btn btn-red"></div>
+            <div class="btn btn-yellow"></div>
+            <div class="btn btn-green"></div>
+        </div>
+
+        <div class="profile-section">
+            <div class="profile-avatar-container">
+                <img src="{{ url_for('static', filename='images/Profesor.jpg') }}" alt="Perfil" class="profile-avatar">
+                <div class="status-dot"></div>
+            </div>
+            <h2 class="profile-name">Selecciona un chat</h2>
+            <p class="profile-role">...</p>
+        </div>
+
+        <div class="achievements-grid" id="trophy-display">
+            <div class="achievement-slot">❓</div>
+            <div class="achievement-slot">❓</div>
+            <div class="achievement-slot">❓</div>
+            <div class="achievement-slot">❓</div>
+            <div class="achievement-slot">❓</div>
+            <div class="achievement-slot">❓</div>
+            <div class="achievement-slot">❓</div>
+            <div class="achievement-slot">❓</div>
+            <div class="achievement-slot">❓</div>
+        </div>
+
+        <div class="mission-card" id="next-goal">
+            <h3>Progreso</h3>
+            <p>Selecciona a un hijo para ver sus logros.</p>
+        </div>
+
+        <div class="ai-graphic-container">
+            <img src="{{ url_for('static', filename='images/MenteIA.gif') }}" alt="AI Animation">
+        </div>
+    </aside>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+
+    <script type="module" src="{{ url_for('static', filename='script.js') }}"></script>
+
+    <div id="toast-container"></div>
+</body>
+
+</html>

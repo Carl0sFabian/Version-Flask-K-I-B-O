@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>K-I-B-O</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='images/Icon.png') }}" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-okaidia.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"
+        defer></script>
+
+    <style>
+        .student-list-container {
+            padding: 24px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .student-card {
+            background-color: #102540;
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            border: 1px solid #172E4D;
+        }
+
+        .student-card img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #4a90e2;
+        }
+
+        .student-info h4 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #ffffff;
+        }
+
+        .student-info p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: #a0a8c2;
+        }
+
+        .view-chats-btn {
+            margin-left: auto;
+            background-color: #3a8ee6;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: background-color 0.2s;
+        }
+
+        .view-chats-btn:hover {
+            background-color: #4a90e2;
+        }
+
+        .stats-table-container {
+            padding: 24px;
+        }
+
+        #estadisticas h2 {
+            padding: 24px 24px 0 24px;
+            margin-top: 0;
+            color: #fff;
+        }
+
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: #102540;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #172E4D;
+        }
+
+        .stats-table th,
+        .stats-table td {
+            padding: 16px;
+            text-align: left;
+            color: #e0e0e0;
+            border-bottom: 1px solid #3a3f5a;
+        }
+
+        .stats-table th {
+            background-color: #3a3f5a;
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .stats-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .stats-table tbody tr:hover {
+            background-color: #31354a;
+        }
+
+        .stats-table td:nth-child(2),
+        .stats-table td:nth-child(3),
+        .stats-table td:nth-child(4) {
+            text-align: center;
+            font-weight: 500;
+            font-size: 1.1rem;
+        }
+
+        .prof-checklist {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .prof-checklist .check-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .prof-checklist .check-item label {
+            color: #e0e0e0;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+
+        .prof-checklist .check-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .prof-checklist .check-item input[type="checkbox"]:checked+label {
+            color: #a0a8c2;
+            text-decoration: line-through;
+        }
+
+
+        .content-section#estadisticas h2 {
+            color: var(--text-color);
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            padding: 20px 0;
+        }
+
+        .stats-table-container {
+            background-color: var(--secondary-bg-color);
+            border-radius: 12px;
+            box-shadow: var(--shadow-light);
+            overflow: hidden;
+            margin-top: 20px;
+            padding: 0;
+        }
+
+        .stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            color: var(--text-color);
+        }
+
+        .stats-table thead th {
+            background-color: var(--primary-color-dark);
+            color: white;
+            padding: 15px 20px;
+            font-weight: 600;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .stats-table tbody tr {
+            border-bottom: 1px solid var(--border-color);
+            transition: background-color 0.2s ease;
+        }
+
+        .stats-table tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        .stats-table tbody tr:hover {
+            background-color: var(--hover-bg-color);
+        }
+
+        .stats-table td {
+            padding: 15px 20px;
+            vertical-align: middle;
+        }
+
+        .student-stats-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .student-stats-info img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--primary-color);
+        }
+
+        @media (max-width: 768px) {
+            .stats-table thead {
+                display: none;
+            }
+
+            .stats-table,
+            .stats-table tbody,
+            .stats-table tr,
+            .stats-table td {
+                display: block;
+                width: 100%;
+            }
+
+            .stats-table tr {
+                margin-bottom: 15px;
+                background-color: var(--secondary-bg-color);
+                border-radius: 8px;
+                box-shadow: var(--shadow-light);
+                padding: 10px;
+            }
+
+            .stats-table td {
+                text-align: right;
+                padding-left: 50%;
+                position: relative;
+                border-bottom: 1px solid var(--border-color);
+            }
+
+            .stats-table td:last-child {
+                border-bottom: none;
+            }
+
+            .stats-table td::before {
+                content: attr(data-label);
+                position: absolute;
+                left: 10px;
+                width: calc(50% - 20px);
+                padding-right: 10px;
+                white-space: nowrap;
+                font-weight: 600;
+                color: var(--text-color-light);
+                text-align: left;
+            }
+
+            .student-stats-info {
+                justify-content: flex-end;
+            }
+
+            .student-stats-info span {
+                text-align: right;
+            }
+        }
+
+        :root {
+            --primary-color: #3a8ee6;
+            --primary-color-dark: #2a6bb2;
+            --secondary-bg-color: #1a2a4a;
+            --bg-color: #0d1a33;
+            --text-color: #e0e6ed;
+            --text-color-light: #a0a8c2;
+            --border-color: #2b3a5b;
+            --hover-bg-color: #223555;
+            --shadow-light: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="panel expanded">
+
+        <div class="active-indicator"></div>
+        <div class="panel-bg"></div>
+
+        <div class="window-controls">
+            <div class="btn btn-red"></div>
+            <div class="btn btn-yellow"></div>
+            <div class="btn btn-green"></div>
+        </div>
+
+        <div class="header">
+            <div class="header-left">
+                <div class="avatar-wrap">
+                    <div class="avatar-border"></div>
+                    <img class="avatar-img" src="{{ url_for('static', filename='images/VisualC.png') }}" alt="avatar"
+                        id="user-avatar" />
+                    <div class="avatar-status"></div>
+                </div>
+                <div class="user-meta">
+                    <div class="user-name" id="user-name">Cargando...</div>
+                    <div class="user-role" id="user-role">...</div>
+                </div>
+            </div>
+            <div class="header-action" id="toggle-sidebar-btn">
+                <div class="action-bg"></div>
+                <div class="action-mark">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </div>
+            </div>
+        </div>
+
+        <div class="search-card">
+            <div class="search-row">
+                <div class="search-icon-placeholder">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                </div>
+                <div class="search-text">Search</div>
+            </div>
+        </div>
+
+        <div class="nav-container">
+            <div class="nav-card inicio" data-target="inicio">
+                <div class="nav-card__icon"><i class="fa-solid fa-house"></i></div>
+                <div class="nav-card__label">Inicio</div>
+                <div class="nav-card__ornament"><i class="fa-solid fa-sliders"></i></div>
+            </div>
+            <div class="nav-card chats" data-target="chats" id="chats-link">
+                <div class="nav-card__icon"><i class="fa-solid fa-comment"></i></div>
+                <div class="nav-card__label">Chats</div>
+                <div class="nav-card__pill">0</div>
+                <div class="nav-card__ornament" id="add-chat-btn"><i class="fa-solid fa-plus"></i></div>
+            </div>
+            <div class="nav-card alumnos" data-target="Alumnos">
+                <div class="nav-card__icon"><i class="fa-solid fa-users"></i>
+                    <div class="nav-card__alert"></div>
+                </div>
+                <div class="nav-card__label">Alumnos</div>
+                <div class="nav-card__pill">1</div>
+            </div>
+            <div class="nav-card algoritmos" data-target="estadisticas">
+                <div class="nav-card__icon"><i class="fa-solid fa-chart-line"></i></div>
+                <div class="nav-card__label">Estadisticas</div>
+                <div class="nav-card__ornament special"><i class="fa-solid fa-plus"></i></div>
+            </div>
+            <div class="nav-card configuracion" data-target="configuracion">
+                <div class="nav-card__icon"><i class="fa-solid fa-cog"></i>
+                    <div class="nav-card__alert"></div>
+                </div>
+                <div class="nav-card__label">Configuración</div>
+                <div class="nav-card__pill">9</div>
+            </div>
+        </div>
+
+        <div class="historial-title">
+            <div class="historial-text">Historial de Chats</div>
+            <div class="historial-see">Ver todos</div>
+            <div class="historial-dot"><i class="fa-solid fa-eye"></i></div>
+        </div>
+
+        <div class="chat-list"></div>
+
+        <div class="nav-card logout-button-container" id="logout-btn">
+            <div class="nav-card__icon"><i class="fa-solid fa-right-from-bracket"></i></div>
+            <div class="nav-card__label">Cerrar Sesión</div>
+        </div>
+    </div>
+
+    <main class="main-content">
+        <section id="inicio" class="content-section">
+            <div class="welcome-header">
+                <h2 id="welcome-message">¡Bienvenido de nuevo!</h2>
+                <p>Aquí tienes un resumen de tu actividad reciente. ¿Qué te gustaría hacer hoy?</p>
+            </div>
+            <div class="dashboard-grid">
+                <div class="dashboard-main-column">
+                    <div class="dashboard-card">
+                        <div class="card-header"><i class="fa-solid fa-bolt-lightning"></i>
+                            <h3>Acciones Rápidas</h3>
+                        </div>
+                        <div class="card-body">
+                            <button class="quick-action-btn" id="home-new-chat-btn">
+                                <i class="fa-solid fa-eye"></i><span>Ver Alumnos</span></button>
+                            <button class="quick-action-btn" id="home-go-to-chats-btn">
+                                <i class="fa-solid fa-comment"></i><span>Ver Chats de Alumnos</span></button>
+                            <button class="quick-action-btn" id="home-go-to-db-btn">
+                                <i class="fa-solid fa-chart-line"></i><span>Ver Estadisticas</span></button>
+                            <button class="quick-action-btn" id="home-go-to-config-btn">
+                                <i class="fa-solid fa-cog"></i><span>Configuracion</span></button>
+                        </div>
+                    </div>
+                    <div class="dashboard-card">
+                        <div class="card-header"><i class="fa-solid fa-clock-rotate-left"></i>
+                            <h3>Gestionar Alumnos</h3>
+                        </div>
+                        <div class="card-body" id="students-list-dashboard">
+                            <p class="empty-state">Aún no hay alumnos.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="dashboard-side-column">
+                    <div class="dashboard-card">
+                        <div class="card-header"><i class="fa-solid fa-chart-pie"></i>
+                            <h3>Tus Estadísticas</h3>
+                        </div>
+                        <div class="card-body stats-body">
+                            <div class="stat-item"><span class="stat-value" id="kpi-total-students">0</span><span
+                                    class="stat-label">Estudiantes Totales</span></div>
+                            <div class="stat-item"><span class="stat-value" id="kpi-total-messages">0</span><span
+                                    class="stat-label">Mensajes Enviados </span></div>
+                            <div class="stat-item"><span class="stat-value" id="kpi-total-trophies">0</span><span
+                                    class="stat-label">Logros Desbloqueados</span></div>
+                        </div>
+                    </div>
+                    <div class="dashboard-card mission-dashboard-card">
+                        <div class="card-header"><i class="fa-solid fa-bullseye"></i>
+                            <h3>Actividades Pendientes</h3>
+                        </div>
+                        <div class="card-body" id="next-mission-card-body">
+
+                            <div class="prof-checklist">
+                                <div class="check-item">
+                                    <input type="checkbox" id="prof-task-1" name="prof-task-1" checked>
+                                    <label for="prof-task-1">Revisar chats de alumnos</label>
+                                </div>
+                                <div class="check-item">
+                                    <input type="checkbox" id="prof-task-2" name="prof-task-2">
+                                    <label for="prof-task-2">Analizar estadísticas de progreso</label>
+                                </div>
+                                <div class="check-item">
+                                    <input type="checkbox" id="prof-task-3" name="prof-task-3">
+                                    <label for="prof-task-3">Verificar alumnos inactivos</label>
+                                </div>
+                                <div class="check-item">
+                                    <input type="checkbox" id="prof-task-4" name="prof-task-4">
+                                    <label for="prof-task-4">Preparar nuevo material</label>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card tip-card">
+                        <div class="card-header"><i class="fa-solid fa-lightbulb"></i>
+                            <h3>Sabías que...</h3>
+                        </div>
+                        <div class="card-body" id="tip-of-the-day-body">
+                            <p>Puedes expandir y contraer el panel lateral haciendo clic en la flecha verde.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="chats" class="content-section">
+            <div class="chat-interface">
+                <header class="chat-header">
+                    <div class="header-left"><button class="new-chat-btn"><i class="fa-solid fa-plus"></i> New
+                            chat</button><button class="icon-btn"><i class="fa-solid fa-clock-rotate-left"></i></button>
+                    </div>
+                    <div class="header-right"><i class="fa-solid fa-wand-magic-sparkles"></i><label
+                            class="switch"><input type="checkbox" checked><span class="slider round"></span></label><i
+                            class="fa-regular fa-file-lines"></i><i class="fa-regular fa-bookmark"></i><i
+                            class="fa-solid fa-link"></i></div>
+                </header>
+                <div class="chat-area" id="chat-messages"></div>
+                <footer class="chat-input-area">
+                    <div class="input-wrapper">
+                        <textarea id="message-input" placeholder="Type a new message here"></textarea>
+                        <div class="input-actions">
+                            <button class="icon-btn" id="attach-file-btn"><i class="fa-solid fa-paperclip"></i></button>
+                            <button class="icon-btn"><i class="fa-solid fa-face-smile"></i></button>
+                            <button class="icon-btn" id="send-audio-btn"><i class="fa-solid fa-microphone"></i></button>
+                            <button class="send-btn" id="send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+                        </div>
+                    </div>
+                </footer>
+            </div>
+        </section>
+
+        <section id="Alumnos" class="content-section">
+            <div class="welcome-header">
+                <h2>Gestión de Alumnos</h2>
+                <p>Aquí puedes ver la lista de todos los alumnos y acceder a sus historiales de chat.</p>
+            </div>
+            <div class="student-list-container" id="students-list-page">
+                <p style="padding: 24px; color: #fff;">Cargando alumnos...</p>
+            </div>
+        </section>
+
+        <section id="estadisticas" class="content-section">
+            <h2 style="padding: 24px; color: #fff;">Estadísticas de Alumnos</h2>
+            <p style="padding: 24px; color: #fff;">Cargando datos...</p>
+        </section>
+
+        <section id="configuracion" class="content-section">
+            <div class="settings-container">
+                <h2>Configuración de la Cuenta</h2>
+                <div class="settings-card">
+                    <h3>Perfil de Usuario</h3>
+                    <div class="profile-settings-header">
+                        <div class="avatar-settings-container">
+                            <img src="{{ url_for('static', filename='images/VisualC.png') }}" id="settings-avatar"
+                                alt="Avatar">
+                            <label for="avatar-upload-input" class="edit-avatar-button" title="Cambiar avatar"><i
+                                    class="fa-solid fa-camera"></i></label>
+                            <input type="file" id="avatar-upload-input" accept="image/*" style="display: none;">
+                        </div>
+                        <div class="profile-inputs">
+                            <div class="settings-input-group">
+                                <label for="settings-name-input">Nombre de Usuario</label>
+                                <input type="text" id="settings-name-input" placeholder="Tu nombre">
+                            </div>
+                            <div class="settings-input-group">
+                                <label for="settings-email-input">Correo Electrónico</label>
+                                <input type="email" id="settings-email-input" placeholder="tu@correo.com">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-actions"><button id="save-profile-btn" class="btn-primary">Guardar Cambios</button>
+                    </div>
+                </div>
+                <div class="settings-card">
+                    <h3>Seguridad</h3>
+
+                    <div class="settings-row">
+                        <span>Cambiar Contraseña</span>
+                        <button id="change-password-btn" class="btn-secondary">Cambiar</button>
+                    </div>
+
+                    <div class="modal-overlay hidden" id="change-password-modal-overlay">
+                        <div class="modal-content">
+                            <h3>Cambiar Contraseña</h3>
+                            <p>Ingresa tu nueva contraseña para actualizar la seguridad de tu cuenta.</p>
+
+                            <div class="settings-input-group">
+                                <label for="new-password-input">Nueva Contraseña</label>
+                                <input type="password" id="new-password-input" placeholder="Mínimo 6 caracteres"
+                                    required>
+                            </div>
+
+                            <div class="settings-input-group">
+                                <label for="confirm-password-input">Confirmar Contraseña</label>
+                                <input type="password" id="confirm-password-input"
+                                    placeholder="Confirma la nueva contraseña" required>
+                            </div>
+
+                            <div class="modal-actions">
+                                <button class="modal-button-cancel" id="cancel-password-change-btn">Cancelar</button>
+                                <button class="modal-button-confirm" id="confirm-password-change-btn">Actualizar
+                                    Contraseña</button>
+                            </div>
+
+                            <div id="password-error-message"
+                                style="color: #FF5E61; margin-top: 10px; display: none; font-size: 14px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="settings-card danger-zone">
+                    <h3>Zona de Peligro</h3>
+                    <div class="settings-row">
+                        <div>
+                            <h4>Eliminar Cuenta</h4>
+                            <p>Esta acción es permanente y no se puede deshacer.</p>
+                        </div>
+                        <button id="delete-account-btn" class="btn-danger">Eliminar</button>
+                    </div>
+
+                    <div class="modal-overlay hidden" id="delete-account-modal-overlay">
+                        <div class="modal-content">
+                            <h3 style="color: #FF5E61;">⚠️ ¡Atención! Eliminar Cuenta</h3>
+                            <p>Estás a punto de eliminar tu cuenta de forma **permanente**.</p>
+                            <p style="color: #FF5E61; font-weight: 600;">Esta acción no se puede deshacer. ¿Estás
+                                absolutamente seguro/a de continuar?</p>
+
+                            <div class="modal-actions">
+                                <button class="modal-button-cancel" id="cancel-delete-btn">Cancelar</button>
+                                <button class="btn-danger" id="confirm-delete-btn">SÍ, Eliminar Permanentemente</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>
+        </section>
+    </main>
+
+    <aside class="sidebar-right">
+        <div class="window-controls">
+            <div class="btn btn-red"></div>
+            <div class="btn btn-yellow"></div>
+            <div class="btn btn-green"></div>
+        </div>
+        <div class="profile-section">
+            <div class="profile-avatar-container"><img src="{{ url_for('static', filename='images/Profesor.jpg') }}"
+                    alt="Avatar del profesor" class="profile-avatar">
+                <div class="status-dot"></div>
+            </div>
+            <h2 class="profile-name">Diego Rojas Sihuay</h2>
+            <p class="profile-role">Profesor</p>
+        </div>
+        <div class="achievements-grid" id="trophy-display">
+            <div class="achievement-slot">❓</div>
+            <div class="achievement-slot">❓</div>
+            <div class="achievement-slot">❓</div>
+            <div class="achievement-slot">❓</div>
+            <div class="achievement-slot">❓</div>
+            <div class="achievement-slot">❓</div>
+            <div class="achievement-slot">❓</div>
+            <div class="achievement-slot">❓</div>
+            <div class="achievement-slot">❓</div>
+        </div>
+        <div class="mission-card" id="next-goal">
+            <h3>¡Siguiente misión!</h3>
+            <p>Escribe 5 mensajes más para ganar el trofeo 🏆</p>
+        </div>
+        <div class="ai-graphic-container"><img src="{{ url_for('static', filename='images/MenteIA.gif') }}"
+                alt="Animación de esfera AI"></div>
+    </aside>
+
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+
+    <script type="module" src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+</body>
+
+</html>
