@@ -2,7 +2,7 @@ import os
 import re
 import requests
 import firebase_admin
-from firebase_admin import credentials, firestore
+from firebase_admin import credentials, firestore, auth
 from flask import Flask, render_template, request, jsonify, url_for
 import joblib
 import random
@@ -159,9 +159,7 @@ def _generate_and_save_bot_response(user_text, chat_id):
                             bot_response_text = "No estoy seguro de cómo responder a eso, ¿puedes intentarlo de otra manera?"
                     else: 
                         print(f"Intención técnica detectada. Pasando a Q&A.")
-                else:
-                    print("Ninguna intención detectada. Pasando a Q&A.")
-            
+                
             if not bot_response_text:
                 if not MODELOS_CARGADOS:
                     bot_response_text = "Lo siento, tengo problemas para acceder a la base de conocimiento." 
@@ -251,6 +249,60 @@ def _generate_and_save_bot_response(user_text, chat_id):
                 'contentType': 'text',
                 'rating': 0
             })
+
+@app.route('/api/admin/create_user', methods=['POST'])
+def admin_create_user():
+    if db is None:
+        return jsonify({"error": "Error interno del servidor: La base de datos no está conectada."}), 500
+
+    try:
+        data = request.json
+        name = data.get('name')
+        email = data.get('email')
+        password = data.get('password')
+        role = data.get('role')
+        
+        if not all([name, email, password, role]):
+            return jsonify({"error": "Faltan datos obligatorios (nombre, email, contraseña, rol)."}), 400
+            
+        if len(password) < 6:
+            return jsonify({"error": "La contraseña debe tener al menos 6 caracteres."}), 400
+
+        avatar_url = f"https://api.dicebear.com/8.x/initials/svg?seed={requests.utils.quote(name)}"
+
+        user = auth.create_user(
+            email=email,
+            password=password,
+            display_name=name,
+            photo_url=avatar_url,
+            email_verified=False
+        )
+
+        db.collection('users').document(user.uid).set({
+            'name': name,
+            'email': email,
+            'role': role,
+            'avatarUrl': avatar_url,
+            'tutorialVisto': False
+        })
+        
+        print(f"Usuario {name} creado exitosamente con UID: {user.uid}")
+
+        return jsonify({"status": "success", "uid": user.uid}), 201
+
+    except firebase_admin.exceptions.FirebaseError as fe:
+        error_message = str(fe)
+        if 'email already exists' in error_message:
+             return jsonify({"error": "El correo electrónico ya está en uso."}), 409
+        
+        print(f"Error de Firebase Admin: {fe}")
+        return jsonify({"error": f"Error de Firebase Admin: {error_message}"}), 500
+        
+    except Exception as e:
+        print(f"Error inesperado al crear usuario: {e}")
+        traceback.print_exc()
+        return jsonify({"error": "Error interno al procesar la solicitud."}), 500
+
 
 @app.route('/index_alumno')
 def index_alumno():
@@ -362,7 +414,7 @@ def process_audio():
 
         for segment in segments:
             if segment.no_speech_prob > 0.6:
-                print(f"  -> Segmento ignorado (Ruido/Silencio - Prob: {segment.no_speech_prob:.2f})")
+                print(f"  -> Segmento ignorado (Ruido/Silencio - Prob: {segment.no_speech_prob:.2f})")
                 continue
             
             valid_segments.append(segment.text)
@@ -372,7 +424,7 @@ def process_audio():
         os.remove(temp_path)
         print("Archivo temporal eliminado.")
 
-        user_display_text = transcribed_text   
+        user_display_text = transcribed_text
         
         if not transcribed_text:
             print("Resultado: El audio era solo ruido o no se detectó voz clara.")

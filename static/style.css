@@ -3186,24 +3186,25 @@ body.role-padre .historial-dot {
     font-size: 0.8rem;
     color: #7D96B3;
 }
+
 .tour-overlay {
     position: fixed;
-    top: 0; 
+    top: 0;
     left: 0;
-    width: 100vw; 
+    width: 100vw;
     height: 100vh;
-    background: rgba(0, 0, 0, 0.6); 
+    background: rgba(0, 0, 0, 0.6);
     z-index: 9998;
-    pointer-events: all; 
+    pointer-events: all;
 }
 
 .tour-element-highlight {
     position: relative;
-    z-index: 9999 !important; 
+    z-index: 9999 !important;
     box-shadow: 0 0 0 4px #0077FF, 0 0 20px rgba(0, 119, 255, 0.6);
-    background-color: #0A1C33; 
+    background-color: #0A1C33;
     border-radius: 8px;
-    pointer-events: none; 
+    pointer-events: none;
 }
 
 .tour-card {
@@ -3214,7 +3215,7 @@ body.role-padre .historial-dot {
     border-radius: 15px;
     padding: 20px;
     z-index: 10000;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
     transition: all 0.3s ease;
 }
 
@@ -3322,4 +3323,178 @@ body.role-padre .historial-dot {
 .toast.error {
     background-color: var(--error-color);
     border-left: 5px solid #F44336;
+}
+
+#user-creation-container .role-title-row {
+    padding-bottom: 5px;
+    border-bottom: 1px solid #172E4D;
+    margin-bottom: 5px !important;
+}
+
+.role-selector-compact {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #041B3A;
+    border: 1px solid #172E4D;
+    border-radius: 10px;
+    padding: 10px 20px;
+}
+
+.role-selector-compact input[type=radio] {
+    display: none;
+}
+
+.role-selector-compact .role-label-compact {
+    color: #CFD9E6;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 5px 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.2s;
+}
+
+.role-selector-compact .role-label-compact::before {
+    content: '';
+    width: 14px;
+    height: 14px;
+    border: 2px solid #7D96B3;
+    border-radius: 50%;
+    transition: all 0.2s;
+    background-color: transparent;
+    flex-shrink: 0;
+}
+
+.role-selector-compact input[type=radio]:checked+.role-label-compact {
+    color: #FFFFFF;
+}
+
+.role-selector-compact input[type=radio]:checked+.role-label-compact::before {
+    border-color: #0077FF;
+    background-color: #0077FF;
+    box-shadow: 0 0 0 3px #041B3A;
+}
+
+#signup-form button[type="submit"] {
+    margin-top: 15px;
+}
+
+.input-group-styled {
+    position: relative;
+    width: 100%;
+}
+
+.input-group-styled input {
+    width: 100%;
+    background-color: transparent;
+    border: none;
+    border-bottom: 2px solid #172E4D;
+    padding: 10px 0 5px 40px;
+    color: #EBF0F5;
+    font-size: 16px;
+    outline: none;
+    transition: border-color 0.3s;
+}
+
+.input-group-styled input:focus {
+    border-bottom-color: #0077FF;
+}
+
+.input-group-styled label {
+    position: absolute;
+    top: 50%;
+    left: 40px;
+    transform: translateY(-50%);
+    color: #7D96B3;
+    font-size: 14px;
+    pointer-events: none;
+    transition: all 0.3s ease;
+}
+
+.input-group-styled .icon-float {
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 18px;
+    color: #7D96B3;
+    transition: color 0.3s;
+}
+
+.input-group-styled input:focus+label,
+.input-group-styled input:not(:placeholder-shown)+label {
+    top: 0px;
+    font-size: 11px;
+    color: #0077FF;
+}
+
+.input-group-styled input:focus+label+.icon-float,
+.input-group-styled input:not(:placeholder-shown)+label+.icon-float {
+    color: #0077FF;
+}
+
+.input-group-styled input[type="password"]:not(:placeholder-shown)+label {
+    top: 0px;
+    font-size: 11px;
+    color: #0077FF;
+}
+
+.input-group-styled input[type="password"] {
+    color: #EBF0F5;
+}
+
+.student-list-monitor {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.monitor-student-card {
+    display: flex;
+    align-items: center;
+    background-color: #102540;
+    /* Color de fondo más claro que el card */
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #172e4d;
+}
+
+.monitor-avatar {
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    margin-right: 15px;
+    object-fit: cover;
+}
+
+.monitor-info {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.monitor-info h4 {
+    margin: 0;
+    font-size: 0.95em;
+    color: #ebf0f5;
+    font-weight: 600;
+}
+
+.monitor-info p {
+    margin: 0;
+    font-size: 0.8em;
+    color: #7d96b3;
+}
+
+.monitor-role {
+    font-size: 0.75rem;
+    padding: 3px 8px;
+    border-radius: 4px;
+    background: #50BB6920;
+    color: #50BB69;
+    border: 1px solid #50BB69;
 }

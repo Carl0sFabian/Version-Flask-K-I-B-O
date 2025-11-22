@@ -46,6 +46,188 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // --- FUNCIONES DE SOPORTE GLOBALES ---
+
+    function showToast(message, type = 'success', duration = 4000) {
+        const toastContainer = document.getElementById('toast-container') || document.body.appendChild(document.createElement('div'));
+        toastContainer.id = 'toast-container';
+
+        const toast = document.createElement('div');
+        toast.classList.add('toast', type);
+
+        let iconClass = '';
+        if (type === 'success') {
+            iconClass = 'fas fa-check-circle';
+        } else if (type === 'error') {
+            iconClass = 'fas fa-times-circle';
+        } else {
+            iconClass = 'fas fa-info-circle';
+        }
+
+        toast.innerHTML = `<i class="${iconClass}"></i><span>${message}</span>`;
+        toastContainer.appendChild(toast);
+
+        setTimeout(() => {
+            toast.classList.add('show');
+        }, 10);
+
+        setTimeout(() => {
+            toast.classList.remove('show');
+            toast.addEventListener('transitionend', () => {
+                toast.remove();
+            }, {
+                once: true
+            });
+        }, duration);
+    }
+    window.showToast = showToast;
+
+    // --- LÓGICA DE MONITOREO Y VINCULACIÓN (MOVIDA A ESTE ÁMBITO) ---
+
+    async function loadTeachersForSelects() {
+        const monitorSelect = document.getElementById('teacher-monitor-select');
+        const assignSelect = document.getElementById('teacher-assign-select');
+
+        if (!monitorSelect && !assignSelect) return;
+
+        try {
+            const snapshot = await db.collection('users').where('role', '==', 'profesor').get();
+
+            const optionsHtml = snapshot.docs.map(doc => {
+                const teacher = doc.data();
+                return `<option value="${doc.id}">${teacher.name} (${teacher.email})</option>`;
+            }).join('');
+
+            const placeholderOption = '<option value="">Cargando Profesores...</option>';
+
+            if (monitorSelect) {
+                monitorSelect.innerHTML = placeholderOption + optionsHtml;
+                if (!monitorSelect.dataset.listenerAdded) {
+                    monitorSelect.addEventListener('change', (e) => loadTeacherStudents(e.target.value));
+                    monitorSelect.dataset.listenerAdded = 'true';
+                }
+            }
+
+            if (assignSelect) {
+                assignSelect.innerHTML = placeholderOption + optionsHtml;
+            }
+
+        } catch (error) {
+            console.error("Error cargando profesores:", error);
+            const errorOption = '<option value="">Error al cargar profesores</option>';
+            if (monitorSelect) monitorSelect.innerHTML = errorOption;
+            if (assignSelect) assignSelect.innerHTML = errorOption;
+        }
+    }
+
+    async function loadTeacherStudents(teacherId) {
+        const container = document.getElementById('students-grid-container');
+        if (!container) return;
+
+        container.innerHTML = '<p class="empty-state">Cargando alumnos...</p>';
+
+        if (!teacherId) {
+            container.innerHTML = '<p class="empty-state">Selecciona un profesor para cargar la lista de alumnos.</p>';
+            return;
+        }
+
+        try {
+            const studentsSnap = await db.collection('users').where('teacherId', '==', teacherId).get();
+
+            if (studentsSnap.empty) {
+                container.innerHTML = '<p class="empty-state">Este profesor no tiene alumnos vinculados.</p>';
+                return;
+            }
+
+            let studentsHtml = '<div class="student-list-monitor" style="display: flex; flex-direction: column; gap: 10px;">';
+            studentsSnap.forEach(doc => {
+                const student = doc.data();
+                studentsHtml += `
+                    <div class="monitor-student-card" style="display: flex; align-items: center; background-color: #102540; padding: 10px; border-radius: 8px; border: 1px solid #172e4d;">
+                        <img src="${student.avatarUrl || 'static/images/Icon.png'}" alt="Avatar" class="monitor-avatar" style="width: 35px; height: 35px; border-radius: 50%; margin-right: 15px; object-fit: cover;">
+                        <div class="monitor-info" style="flex-grow: 1;">
+                            <h4 style="margin: 0; font-size: 0.95em; color: #ebf0f5; font-weight: 600;">${student.name}</h4>
+                            <p style="margin: 0; font-size: 0.8em; color: #7d96b3;">${student.email}</p>
+                        </div>
+                        <span class="monitor-role" style="font-size: 0.75rem; padding: 3px 8px; border-radius: 4px; background: #50BB6920; color: #50BB69; border: 1px solid #50BB69;">Alumno</span>
+                    </div>
+                `;
+            });
+            studentsHtml += '</div>';
+
+            container.innerHTML = studentsHtml;
+
+        } catch (error) {
+            console.error("Error cargando alumnos del profesor:", error);
+            container.innerHTML = '<p class="empty-state" style="color:#FF5E61;">Error al cargar la lista de alumnos.</p>';
+        }
+    }
+
+    async function linkStudentToTeacher() {
+        const teacherId = document.getElementById('teacher-assign-select').value;
+        const studentEmail = document.getElementById('link-student-email').value.trim();
+        const linkBtn = document.getElementById('btn-link-student');
+
+        if (!teacherId || !studentEmail) {
+            showToast("Selecciona un profesor e ingresa un correo de estudiante.", 'warning');
+            return;
+        }
+
+        linkBtn.disabled = true;
+        linkBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+
+        try {
+            const studentSnapshot = await db.collection('users').where('email', '==', studentEmail).get();
+
+            if (studentSnapshot.empty) {
+                showToast("No se encontró un usuario estudiante con ese correo.", 'error');
+                return;
+            }
+
+            const studentDoc = studentSnapshot.docs[0];
+
+            if (studentDoc.data().role !== 'alumno') {
+                showToast(`El usuario ${studentDoc.data().name} no es un Alumno.`, 'error');
+                return;
+            }
+
+            await db.collection('users').doc(studentDoc.id).update({
+                teacherId: teacherId
+            });
+
+            showToast(`¡${studentDoc.data().name} ha sido asignado correctamente!`, 'success');
+            document.getElementById('link-student-email').value = '';
+
+            const selectedMonitorId = document.getElementById('teacher-monitor-select').value;
+            if (selectedMonitorId === teacherId) {
+                loadTeacherStudents(teacherId);
+            }
+
+        } catch (error) {
+            console.error("Error al vincular estudiante-profesor:", error);
+            showToast("Error al vincular. Verifica los permisos de Firebase.", 'error');
+        } finally {
+            linkBtn.disabled = false;
+            linkBtn.innerHTML = '<i class="fa-solid fa-plus"></i>';
+        }
+    }
+
+    function initializeTeacherMonitorLogic() {
+        const linkStudentBtn = document.getElementById('btn-link-student');
+
+        if (document.getElementById('teacher-monitor-select') || document.getElementById('teacher-assign-select')) {
+            loadTeachersForSelects();
+        }
+
+        if (linkStudentBtn) {
+            const newLinkBtn = linkStudentBtn.cloneNode(true);
+            linkStudentBtn.parentNode.replaceChild(newLinkBtn, linkStudentBtn);
+            newLinkBtn.addEventListener('click', linkStudentToTeacher);
+        }
+    }
+
+    // --- FIN LÓGICA DE MONITOREO Y VINCULACIÓN ---
+
     auth.onAuthStateChanged(async (user) => {
         const currentPath = window.location.pathname;
 
@@ -94,7 +276,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             initializeAppLogic(user, userData.role, shouldShowTour);
 
             initializeSettingsListeners(user);
-
+            initializeUserManagementLogic();
         } else {
             if (currentPath !== '/login') {
                 window.location.replace('/login');
@@ -430,52 +612,43 @@ document.addEventListener('DOMContentLoaded', async () => {
             return Array.from(pictogramasUnicos.values());
         }
 
-        const TOUR_STEPS = [
-            {
-                target: '#add-chat-btn',
-                title: 'Empieza aquí',
-                description: 'Haz clic aquí para iniciar una nueva conversación con K-I-B-O sobre cualquier tema.'
-            },
-            {
-                target: '.chat-list',
-                title: 'Tu Historial',
-                description: 'Aquí se guardarán todas tus conversaciones anteriores para que puedas consultarlas cuando quieras.'
-            },
-            {
-                target: '.nav-card.configuracion',
-                title: 'Configuración',
-                description: 'En configuración puedes cambiar tu avatar, contraseña y ajustar tus preferencias.'
-            },
-            {
-                target: '#trophy-display',
-                title: 'Gana Logros',
-                description: '¡Cuanto más aprendas y chatees, desbloquearás nuevos trofeos aquí!'
-            },
-            {
-                target: '#message-input',
-                title: 'Escribe tu Mensaje',
-                description: 'Usa este cuadro para escribir tus preguntas, tareas o cualquier consulta que tengas para K-I-B-O.',
-                placement: 'top'
-            },
-            {
-                target: '#attach-file-btn',
-                title: 'Adjuntar Archivos',
-                description: 'Presiona este icono para subir imágenes, documentos o cualquier otro archivo relevante a tu consulta.',
-                placement: 'top'
-            },
-            {
-                target: '#send-audio-btn',
-                title: 'Enviar Audio',
-                description: 'Si prefieres hablar, presiona y mantén para grabar tu voz. K-I-B-O transcribirá y responderá.',
-                placement: 'top'
-            },
-            {
-                target: '#send-btn',
-                title: '¡A Enviar!',
-                description: 'Una vez que termines de escribir, pulsa este botón para enviar tu mensaje.',
-                placement: 'top'
-            }
-        ];
+        const TOUR_STEPS = [{
+            target: '#add-chat-btn',
+            title: 'Empieza aquí',
+            description: 'Haz clic aquí para iniciar una nueva conversación con K-I-B-O sobre cualquier tema.'
+        }, {
+            target: '.chat-list',
+            title: 'Tu Historial',
+            description: 'Aquí se guardarán todas tus conversaciones anteriores para que puedas consultarlas cuando quieras.'
+        }, {
+            target: '.nav-card.configuracion',
+            title: 'Configuración',
+            description: 'En configuración puedes cambiar tu avatar, contraseña y ajustar tus preferencias.'
+        }, {
+            target: '#trophy-display',
+            title: 'Gana Logros',
+            description: '¡Cuanto más aprendas y chatees, desbloquearás nuevos trofeos aquí!'
+        }, {
+            target: '#message-input',
+            title: 'Escribe tu Mensaje',
+            description: 'Usa este cuadro para escribir tus preguntas, tareas o cualquier consulta que tengas para K-I-B-O.',
+            placement: 'top'
+        }, {
+            target: '#attach-file-btn',
+            title: 'Adjuntar Archivos',
+            description: 'Presiona este icono para subir imágenes, documentos o cualquier otro archivo relevante a tu consulta.',
+            placement: 'top'
+        }, {
+            target: '#send-audio-btn',
+            title: 'Enviar Audio',
+            description: 'Si prefieres hablar, presiona y mantén para grabar tu voz. K-I-B-O transcribirá y responderá.',
+            placement: 'top'
+        }, {
+            target: '#send-btn',
+            title: '¡A Enviar!',
+            description: 'Una vez que termines de escribir, pulsa este botón para enviar tu mensaje.',
+            placement: 'top'
+        }];
         let currentTourStep = 0;
         let currentUserIdForTour = null;
 
@@ -544,18 +717,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             const card = document.getElementById('tour-card');
             const arrow = card ? card.querySelector('.tour-arrow') : null;
 
-            // Lógica de navegación forzada para el paso 4 y siguientes (índice 3 en adelante)
             if (index >= 3) {
                 const chatsLink = document.querySelector('.nav-card.chats');
                 if (chatsLink && !chatsLink.classList.contains('active-nav')) {
                     chatsLink.click();
                     setTimeout(() => {
-                        // Re-intenta obtener el target después de la navegación
                         targetEl = document.querySelector(step.target);
                         if (targetEl) {
                             mostrarPaso(index);
                         } else {
-                            // Si el target sigue sin aparecer (ej. #trophy-display), pasamos al siguiente
                             if (index < TOUR_STEPS.length - 1) {
                                 currentTourStep++;
                                 mostrarPaso(currentTourStep);
@@ -563,7 +733,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 finalizarTour();
                             }
                         }
-                    }, 300); // 300ms de espera para que la interfaz se cargue
+                    }, 300);
                     return;
                 }
             }
@@ -585,7 +755,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (prevBtn) prevBtn.style.display = (index === 0) ? 'none' : 'block';
 
             targetEl.classList.add('tour-element-highlight');
-            targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            targetEl.scrollIntoView({
+                behavior: 'smooth',
+                block: 'center'
+            });
 
             const rect = targetEl.getBoundingClientRect();
             const cardRect = card.getBoundingClientRect();
@@ -596,17 +769,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             const forcedPlacement = step.placement;
 
             if (isRightSidebar) {
-                // Posicionamiento para el sidebar derecho (#trophy-display)
                 left = rect.left - cardRect.width - margin;
                 top = rect.top + (rect.height / 2) - (cardRect.height / 2);
                 arrowClass = 'right';
             } else if (forcedPlacement === 'top') {
-                // Posicionamiento para la barra de mensajes (bottom center)
                 left = rect.left + (rect.width / 2) - (cardRect.width / 2);
                 top = rect.top - cardRect.height - margin;
                 arrowClass = 'bottom';
             } else {
-                // Lógica de posición por defecto (izquierda/centro)
                 left = rect.right + margin;
                 top = rect.top + (rect.height / 2) - (cardRect.height / 2);
                 arrowClass = 'left';
@@ -624,7 +794,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             card.style.left = `${left}px`;
 
             if (arrow) {
-                arrow.style.top = ''; arrow.style.bottom = ''; arrow.style.left = ''; arrow.style.right = '';
+                arrow.style.top = '';
+                arrow.style.bottom = '';
+                arrow.style.left = '';
+                arrow.style.right = '';
                 arrow.style.transform = '';
 
                 if (arrowClass === 'left') {
@@ -708,7 +881,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 snapshot.forEach(doc => {
-                    const student = { uid: doc.id, ...doc.data() };
+                    const student = {
+                        uid: doc.id,
+                        ...doc.data()
+                    };
                     htmlContent += generateCardHTML(student);
                     if (snapshot.docs.indexOf(doc) < 3) {
                         dashboardContent += generateCardHTML(student, true);
@@ -1092,7 +1268,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                             }
                         });
                         realTrophyCount = uniqueTrophies.size;
-                    } catch (err) { console.error(err); }
+                    } catch (err) {
+                        console.error(err);
+                    }
 
                     const childCard = document.createElement('div');
                     childCard.className = 'child-profile-card';
@@ -1109,11 +1287,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <div class="child-stats-row">
                             <div class="stat-box">
                                 <span class="stat-number" style="color: #0077FF;">${realChatCount}</span>
-                                <span class="stat-label">Chats</span>
+                                <span class="label">Chats</span>
                             </div>
                             <div class="stat-box" style="border-left: 1px solid rgba(255,255,255,0.1); padding-left: 20px;">
                                 <span class="stat-number" style="color: #F47432;">${realTrophyCount}</span>
-                                <span class="stat-label">Logros</span>
+                                <span class="label">Logros</span>
                             </div>
                         </div>
                         <button class="action-btn-full view-child-chats" data-child-id="${doc.id}">
@@ -1124,7 +1302,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     childCard.querySelector('.unlink-child-btn').addEventListener('click', async (e) => {
                         e.stopPropagation();
                         if (confirm(`¿Estás seguro de que quieres desvincular a ${child.name}?`)) {
-                            await db.collection('users').doc(doc.id).update({ parentId: null });
+                            await db.collection('users').doc(doc.id).update({
+                                parentId: null
+                            });
                             loadMyChildren(parentId);
                         }
                     });
@@ -1280,6 +1460,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             playBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
+                e.preventDefault();
                 if (audio.paused) {
                     audio.play();
                     icon.classList.remove('fa-play');
@@ -1353,7 +1534,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (ownerId === userId && chatCounter) {
                         chatCounter.textContent = snapshot.size;
                         if (userRole === 'alumno') {
-                            const chats = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                            const chats = snapshot.docs.map(doc => ({
+                                id: doc.id,
+                                ...doc.data()
+                            }));
                             updateDashboard(chats);
                         }
                     } else if (chatCounter && userRole === 'alumno') {
@@ -1365,7 +1549,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
 
                     snapshot.docs.forEach(doc => {
-                        const chat = { id: doc.id, ...doc.data() };
+                        const chat = {
+                            id: doc.id,
+                            ...doc.data()
+                        };
                         const chatItem = document.createElement('div');
                         chatItem.className = 'chat-item';
                         chatItem.setAttribute('data-chat-id', chat.id);
@@ -1417,7 +1604,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                     snapshot.docChanges().forEach(change => {
                         if (change.type === 'added' || change.type === 'modified') {
-                            const msgData = { id: change.doc.id, ...change.doc.data() };
+                            const msgData = {
+                                id: change.doc.id,
+                                ...change.doc.data()
+                            };
                             const existingMessageElement = chatMessages.querySelector(`[data-message-id="${msgData.id}"]`);
                             if (existingMessageElement) {
                                 renderMessage(msgData, false, existingMessageElement);
@@ -1488,8 +1678,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 await fetch('/api/get_bot_response', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ text: userText, chatId: chatId })
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text: userText,
+                        chatId: chatId
+                    })
                 });
             } catch (error) {
                 console.error(error);
@@ -1500,8 +1695,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             try {
                 await fetch('/api/process_audio', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ audioUrl: audioUrl, chatId: chatId, messageId: messageId })
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        audioUrl: audioUrl,
+                        chatId: chatId,
+                        messageId: messageId
+                    })
                 });
             } catch (error) {
                 console.error(error);
@@ -1526,7 +1727,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                         contentType: 'text'
                     });
-                } catch (e) { console.error(e); }
+                } catch (e) {
+                    console.error(e);
+                }
                 return;
             }
 
@@ -1570,6 +1773,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 alert("Hubo un error al subir el archivo.");
             }
         }
+
         function renderRatingStarsHTML(rating) {
             let html = '';
             for (let i = 1; i <= 5; i++) {
@@ -1733,7 +1937,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (msg.type === 'bot' && msg.text && msg.contentType === 'text') {
                 const textContainer = chatMessageElement.querySelector('.bot-text-container');
                 if (textContainer) {
-                    if (animate && !isUpdate) {
+                    if (animate && !isInitialLoad) {
                         if (typeof typewriterEffect !== 'undefined') typewriterEffect(textContainer, msg.text);
                         else textContainer.textContent = msg.text;
                     } else {
@@ -2000,15 +2204,42 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         const TROPHY_GOALS = {
-            5: { id: 't1', emoji: '👍' },
-            10: { id: 't2', emoji: '🧠' },
-            15: { id: 't3', emoji: '🔍' },
-            20: { id: 't4', emoji: '🚀' },
-            25: { id: 't5', emoji: '🌟' },
-            30: { id: 't6', emoji: '🦾' },
-            35: { id: 't7', emoji: '🎓' },
-            40: { id: 't8', emoji: '🌈' },
-            45: { id: 't9', emoji: '🏆' }
+            5: {
+                id: 't1',
+                emoji: '👍'
+            },
+            10: {
+                id: 't2',
+                emoji: '🧠'
+            },
+            15: {
+                id: 't3',
+                emoji: '🔍'
+            },
+            20: {
+                id: 't4',
+                emoji: '🚀'
+            },
+            25: {
+                id: 't5',
+                emoji: '🌟'
+            },
+            30: {
+                id: 't6',
+                emoji: '🦾'
+            },
+            35: {
+                id: 't7',
+                emoji: '🎓'
+            },
+            40: {
+                id: 't8',
+                id: '🌈'
+            },
+            45: {
+                id: 't9',
+                emoji: '🏆'
+            }
         };
 
         async function checkAndUnlockTrophies(chatId) {
@@ -2054,7 +2285,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         sidebarProfileName.textContent = userData.name;
                         sidebarProfileRole.textContent = USER_ROLES_MAP[userData.role] || 'Usuario';
                     }
-                } catch (e) { console.error(e); }
+                } catch (e) {
+                    console.error(e);
+                }
 
                 trophyDisplay.querySelectorAll(".achievement-slot").forEach(slot => {
                     slot.textContent = '❓';
@@ -2152,5 +2385,99 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (userRole === 'padre') {
             loadChildrenSummaryForDashboard(userId);
         }
+    }
+
+    function handleSignupFormSubmit(signupForm) {
+        if (!signupForm) return;
+
+        const submitButton = signupForm.querySelector('button[type="submit"]');
+        if (!submitButton) return;
+
+        const clonedButton = submitButton.cloneNode(true);
+        submitButton.parentNode.replaceChild(clonedButton, submitButton);
+
+        clonedButton.addEventListener('click', async (e) => {
+            e.preventDefault();
+
+            clonedButton.disabled = true;
+            clonedButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> CREANDO...';
+
+            const name = document.getElementById('signup-name').value;
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            const roleEl = document.querySelector('input[name="role"]:checked');
+            const role = roleEl ? roleEl.value : 'alumno';
+
+            const currentAdminUser = firebase.auth().currentUser;
+            if (!currentAdminUser) {
+                showToast("Error: Sesión de administrador no activa. Por favor, reinicie la sesión.", 'error');
+                clonedButton.disabled = false;
+                clonedButton.textContent = 'CREAR CUENTA';
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/admin/create_user', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ name, email, password, role })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+
+                    showToast(`Cuenta para ${name} creada exitosamente.`, 'success');
+
+                    signupForm.reset();
+
+                    if (window.loadDeveloperDashboardData) {
+                        window.loadDeveloperDashboardData();
+                    }
+
+
+                } else {
+                    let userMessage = data.error || "Error desconocido al crear usuario.";
+                    if (response.status === 409) {
+                        userMessage = data.error;
+                    }
+                    showToast(userMessage, 'error');
+
+                }
+
+            } catch (error) {
+                console.error('Error de red al crear usuario:', error);
+                showToast("Error de red: No se pudo contactar al servidor.", 'error');
+
+            } finally {
+                clonedButton.disabled = false;
+                clonedButton.textContent = 'CREAR CUENTA';
+                clonedButton.innerHTML = 'CREAR CUENTA';
+            }
+        });
+    }
+
+    function initializeUserManagementLogic() {
+        const signupForm = document.getElementById('signup-form');
+        const closeSuccessModalBtn = document.getElementById('close-success-modal-btn');
+        const creationSuccessModal = document.getElementById('creation-success-modal');
+
+        handleSignupFormSubmit(signupForm);
+
+        if (closeSuccessModalBtn && creationSuccessModal) {
+            closeSuccessModalBtn.addEventListener('click', () => {
+                creationSuccessModal.classList.add('hidden');
+            });
+
+            creationSuccessModal.addEventListener('click', (e) => {
+                if (e.target === creationSuccessModal) {
+                    creationSuccessModal.classList.add('hidden');
+                }
+            });
+        }
+
+        initializeTeacherMonitorLogic();
     }
 });
