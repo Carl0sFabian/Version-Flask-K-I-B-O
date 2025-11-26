@@ -145,15 +145,12 @@ def _generate_and_save_bot_response(user_text, chat_id):
                 
                 if intent_raw:
                     print(f"Intención detectada -> {intent_raw} (Confianza: {score:.2f})")
-                    CONVERSATIONAL_INTENTS = ['saludo', 'despedida', 'agradecimiento', 'error', 'desconocido'] 
                     
-                    if intent_raw in CONVERSATIONAL_INTENTS:
+                    if intent_raw:
                         intent = intent_raw
                         respuesta_simple = responder_por_intencion(intent, normalized_user_text)
                         
-                        if intent == 'saludo':
-                            bot_response_text = random.choice(["¡Hola! ¿En qué puedo ayudarte hoy?", "¡Hola! ¿Cómo estás?", "¡Qué gusto saludarte!"])
-                        elif respuesta_simple:
+                        if respuesta_simple:
                             bot_response_text = respuesta_simple
                         else:
                             bot_response_text = "No estoy seguro de cómo responder a eso, ¿puedes intentarlo de otra manera?"

@@ -405,7 +405,7 @@ def responder_por_intencion(intencion, msg):
 
     return random.choice(todas_respuestas)
 
-def responder_hibrido_bm25(mensaje, alfa=0.7, k_bm25=30, k_final=5, umbral_qa=0.50):
+def responder_hibrido_bm25(mensaje, alfa=0.5, k_bm25=20, k_final=3, umbral_qa=0.40):
     if not MODELOS_CARGADOS:
         return "Error: Los modelos de IA no pudieron cargarse. Revisa la consola del servidor."
 
