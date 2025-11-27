@@ -1937,7 +1937,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (msg.type === 'bot' && msg.text && msg.contentType === 'text') {
                 const textContainer = chatMessageElement.querySelector('.bot-text-container');
                 if (textContainer) {
-                    if (animate && !isInitialLoad) {
+                    if (animate) {
                         if (typeof typewriterEffect !== 'undefined') typewriterEffect(textContainer, msg.text);
                         else textContainer.textContent = msg.text;
                     } else {

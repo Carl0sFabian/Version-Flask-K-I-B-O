@@ -71,7 +71,7 @@ try:
     df = pd.read_csv('datos_procesados.csv')
     df['pregunta_tokenizada'] = df['pregunta_tokenizada'].apply(ast.literal_eval)
     df['respuesta_tokenizada'] = df['respuesta_tokenizada'].apply(ast.literal_eval)
-    df['pregunta'] = df['pregunta'].apply(normalizar_texto) # Asegura que la columna 'pregunta' esté normalizada
+    df['pregunta'] = df['pregunta'].apply(normalizar_texto) 
     print("Paso 1/6: DataFrame cargado y preguntas normalizadas.")
 
     modelo_w2v = Word2Vec.load("model.w2v")
@@ -156,7 +156,6 @@ def clasificar_intencion(msg: str, umbral=0.55):
 
         print(f'*****Suma de proba: {total_prob}')
         print(f'*****Probabilidad de {proba[i]}')
-        #print(f'*****Etiquetas {etiquetas}')
         return (etiquetas[i], float(proba[i])) if proba[i] >= umbral else (None, float(proba[i]))
     except Exception as e:
         print(f"!! ERROR durante la clasificación de intención: {e}")
@@ -481,7 +480,7 @@ def responder_hibrido_bm25(mensaje, alfa=0.5, k_bm25=20, k_final=3, umbral_qa=0.
         return "Tuve un problema al buscar la respuesta."
 
 def obtener_respuesta_py(mensaje):
-    return responder_hibrido_bm25(mensaje, alfa=0.7, k_bm25=30, k_final=5, umbral_qa=0.50)
+    return responder_hibrido_bm25(mensaje, alfa=0.5, k_bm25=20, k_final=3, umbral_qa=0.40)
 
 
 def obtener_palabras_clave_spacy(texto):

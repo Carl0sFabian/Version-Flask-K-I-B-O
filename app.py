@@ -145,12 +145,27 @@ def _generate_and_save_bot_response(user_text, chat_id):
                 
                 if intent_raw:
                     print(f"Intención detectada -> {intent_raw} (Confianza: {score:.2f})")
+                    CONVERSATIONAL_INTENTS = ['saludo', 'despedida', 'agradecimiento', 'error', 'desconocido','pedir_objeto', 'pedir_ayuda', 'expresar_gustos','pedir_permiso_para_jugar', 'pedir_permiso_para_baño','pedir_permiso_para_ver_tele', 'pedir_permiso_para_salir','disculparse', 'hacer_pregunta', 'expresar_deseo', 'expresar_logro', 'reconocer_logro', 'felicitar', 'expresar_agradecimiento', 'responder_afirmativamente', 
+        'responder_negativamente', 'expresar_miedo', 'expresar_tristeza', 
+        'expresar_alegria', 'expresar_frustracion', 'expresar_sorpresa', 
+        'expresar_cansancio', 'expresar_malestar', 'expresar_empatia', 
+        'expresar_confusión', 'pedir_atencion', 'comentar_sobre_el_clima', 
+        'hablar_de_la_familia', 'preguntar_por_un_amigo', 'pedir_descanso', 
+        'pedir_explicacion', 'hablar_de_la_escuela', 'contar_cuento', 
+        'solicitar_tiempo_de_calidad', 'pedir_silencio', 
+        'hablar_de_actividad_preferida', 'preguntar_por_comida', 
+        'hablar_de_juego_favorito', 'expresar_hambre', 'expresar_sed', 
+        'pedir_info_adicional', 'jergas_amigos', 'jergas_deportes', 
+        'hablar_de_tareas', 'hacer_una_pregunta_personal'
+    ] 
                     
-                    if intent_raw:
+                    if intent_raw in CONVERSATIONAL_INTENTS:
                         intent = intent_raw
                         respuesta_simple = responder_por_intencion(intent, normalized_user_text)
                         
-                        if respuesta_simple:
+                        if intent == 'saludo':
+                            bot_response_text = random.choice(["¡Hola! ¿En qué puedo ayudarte hoy?", "¡Hola! ¿Cómo estás?", "¡Qué gusto saludarte!"])
+                        elif respuesta_simple:
                             bot_response_text = respuesta_simple
                         else:
                             bot_response_text = "No estoy seguro de cómo responder a eso, ¿puedes intentarlo de otra manera?"
