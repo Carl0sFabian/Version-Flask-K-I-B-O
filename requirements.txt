@@ -9,6 +9,7 @@ keras==3.12.0
 numpy==2.3.5
 pandas==2.3.3
 scikit-learn==1.7.2
+rank-bm25==0.2.2
 
 # --- NLP (Procesamiento de Lenguaje) ---
 spacy==3.8.11
