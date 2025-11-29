@@ -4,6 +4,7 @@ import requests
 import firebase_admin
 from firebase_admin import credentials, firestore, auth
 from flask import Flask, render_template, request, jsonify, url_for
+from flasgger import Swagger  
 import joblib
 import random
 import traceback
@@ -27,6 +28,26 @@ from conocimiento import (
 from faster_whisper import WhisperModel
 
 app = Flask(__name__)
+
+swagger_config = {
+    "headers": [],
+    "specs": [
+        {
+            "endpoint": 'apispec',
+            "route": '/apispec.json',
+            "rule_filter": lambda rule: True,  
+            "model_filter": lambda tag: True, 
+        }
+    ],
+    "static_url_path": "/flasgger_static",
+    "swagger_ui": True,
+    "specs_route": "/apidocs/",
+    "title": "API de Asistente Educativo",
+    "version": "1.0.0",
+    "description": "Documentación interactiva de los endpoints del Asistente IA"
+}
+
+swagger = Swagger(app, config=swagger_config)
 
 INITIAL_CLASSIFICATION_THRESHOLD = 0.03
 db = None
@@ -264,6 +285,54 @@ def _generate_and_save_bot_response(user_text, chat_id):
 
 @app.route('/api/admin/create_user', methods=['POST'])
 def admin_create_user():
+    """
+    Crea un nuevo usuario en Firebase Auth y Firestore.
+    ---
+    tags:
+      - Admin
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - name
+            - email
+            - password
+            - role
+          properties:
+            name:
+              type: string
+              example: "Juan Pérez"
+            email:
+              type: string
+              example: "juan@ejemplo.com"
+            password:
+              type: string
+              example: "secreto123"
+            role:
+              type: string
+              example: "profesor"
+              enum: ["alumno", "profesor", "padre", "desarrollador"]
+    responses:
+      201:
+        description: Usuario creado exitosamente
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: "success"
+            uid:
+              type: string
+      400:
+        description: Faltan datos o la contraseña es muy corta
+      409:
+        description: El correo electrónico ya existe
+      500:
+        description: Error interno del servidor
+    """
     if db is None:
         return jsonify({"error": "Error interno del servidor: La base de datos no está conectada."}), 500
 
@@ -348,6 +417,44 @@ def login():
 
 @app.route('/api/get_bot_response', methods=['POST'])
 def handle_chat_message():
+    """
+    Procesa un mensaje de texto del chat y devuelve la respuesta del bot.
+    ---
+    tags:
+      - Chat
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - text
+            - chatId
+          properties:
+            text:
+              type: string
+              example: "Hola, ¿cómo estás?"
+            chatId:
+              type: string
+              example: "chat_12345"
+    responses:
+      200:
+        description: Respuesta procesada exitosamente
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: "success"
+            response_saved:
+              type: boolean
+              example: true
+      400:
+        description: Faltan parámetros requeridos
+      500:
+        description: Error interno del servidor
+    """
     if db is None:
         print("!! ERROR FATAL: La conexión con Firestore no está disponible.")
         return jsonify({"error": "Error interno del servidor al conectar con la base de datos."}), 500
@@ -383,6 +490,51 @@ def handle_chat_message():
 
 @app.route('/api/process_audio', methods=['POST'])
 def process_audio():
+    """
+    Procesa un archivo de audio (URL), lo transcribe y genera una respuesta.
+    ---
+    tags:
+      - Audio
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - audioUrl
+            - chatId
+            - messageId
+          properties:
+            audioUrl:
+              type: string
+              description: URL del archivo de audio (.webm, .mp3, etc.)
+              example: "https://actions.google.com/sounds/v1/alarms/beep_short.ogg"
+            chatId:
+              type: string
+              example: "chat_12345"
+            messageId:
+              type: string
+              example: "msg_98765"
+    responses:
+      200:
+        description: Audio procesado y transcrito correctamente
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: "success"
+            transcription:
+              type: string
+              example: "Hola mundo"
+      400:
+        description: Faltan parámetros requeridos
+      503:
+        description: Modelo Whisper no disponible
+      500:
+        description: Error interno al procesar el audio
+    """
     if db is None:
         print("!! ERROR FATAL: La conexión con Firestore no está disponible.")
         return jsonify({"error": "Error interno del servidor al conectar con la base de datos."}), 500
@@ -426,7 +578,7 @@ def process_audio():
 
         for segment in segments:
             if segment.no_speech_prob > 0.6:
-                print(f"  -> Segmento ignorado (Ruido/Silencio - Prob: {segment.no_speech_prob:.2f})")
+                print(f"  -> Segmento ignorado (Ruido/Silencio - Prob: {segment.no_speech_prob:.2f})")
                 continue
             
             valid_segments.append(segment.text)
@@ -446,9 +598,11 @@ def process_audio():
         print(f"Texto final a procesar: {transcribed_text}")
 
         message_ref = db.collection('chats').document(chat_id).collection('messages').document(message_id)
-        message_ref.update({
+        
+        message_ref.set({
             "text": user_display_text
-        })
+        }, merge=True)
+        
         print("Mensaje de audio en Firestore actualizado.")
 
         _generate_and_save_bot_response(transcribed_text, chat_id)
@@ -468,9 +622,9 @@ def process_audio():
         
         try:
             if 'message_ref' in locals() and message_ref:
-                message_ref.update({
+                message_ref.set({
                     "text": "[Error al transcribir el audio]"
-                })
+                }, merge=True)
         except Exception as db_e:
             print(f"!! ERROR: No se pudo guardar el error de transcripción en Firestore: {db_e}")
             

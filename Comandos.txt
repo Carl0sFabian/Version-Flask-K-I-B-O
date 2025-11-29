@@ -10,7 +10,11 @@ pip install black
 
 pip install spacy
 
+pip install flasgger *Si no te funciona primero haz python -m pip install --upgrade pip y luego intentas *
+
 python -m spacy download es_core_news_md
 
 python app.py
-  
+
+
+Para ver el Swagger utiliza http://127.0.0.1:5000/apidocs/
