@@ -1638,7 +1638,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                             if (existingMessageElement) {
                                 renderMessage(msgData, false, existingMessageElement);
                             } else if (change.type === 'added') {
-                                // Aquí llamamos a la animación solo si NO es carga inicial y el mensaje es del BOT
                                 const shouldAnimate = !isInitialLoad && msgData.type === 'bot';
                                 renderMessage(msgData, shouldAnimate, null);
                             }
@@ -1747,16 +1746,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (file.size === 0) {
-                try {
-                    await db.collection('chats').doc(currentChatId).collection('messages').add({
-                        type: 'bot',
-                        text: '⚠️ No se puede enviar este archivo porque está vacío (0 MB) o dañado. Por favor intenta con otro.',
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                        contentType: 'text'
-                    });
-                } catch (e) {
-                    console.error(e);
-                }
+                alert("El archivo está vacío.");
                 return;
             }
 
@@ -1766,10 +1756,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const downloadURL = await snapshot.ref.getDownloadURL();
 
                 let contentType = 'file';
+                let isDocument = false; 
+
                 if (file.type.startsWith('image/')) {
                     contentType = 'image';
                 } else if (file.type.startsWith('audio/')) {
                     contentType = 'audio';
+                } else if (file.type === 'application/pdf' ||
+                    file.name.includes('.doc') ||
+                    file.name.includes('.docx')) {
+                    contentType = 'file';
+                    isDocument = true; 
                 }
 
                 const userMessageData = {
@@ -1785,18 +1782,53 @@ document.addEventListener('DOMContentLoaded', async () => {
                 await db.collection('chats').doc(currentChatId).collection('messages').add(userMessageData);
 
                 if (contentType === 'image') {
-                    const botResponseData = {
+                    await db.collection('chats').doc(currentChatId).collection('messages').add({
                         type: 'bot',
-                        text: '¡Imagen recibida! 🖼️ ¿Qué te gustaría hacer con ella?',
+                        text: '¡Imagen recibida! 🖼️',
                         timestamp: firebase.firestore.FieldValue.serverTimestamp(),
                         contentType: 'text'
-                    };
+                    });
+                }
+                else if (isDocument) {
+                    const processingMsgRef = await db.collection('chats').doc(currentChatId).collection('messages').add({
+                        type: 'bot',
+                        text: '⏳ Recibido. Estoy leyendo el archivo para darte un resumen...',
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+                        contentType: 'text'
+                    });
 
-                    await db.collection('chats').doc(currentChatId).collection('messages').add(botResponseData);
+                    try {
+                        const response = await fetch('/api/process_document', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                fileUrl: downloadURL,
+                                fileType: file.type.includes('pdf') ? 'pdf' : 'docx'
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (data.status === 'success') {
+                            await processingMsgRef.update({
+                                text: data.summary
+                            });
+                        } else {
+                            await processingMsgRef.update({
+                                text: '❌ Tuve un problema leyendo el contenido del archivo.'
+                            });
+                        }
+
+                    } catch (err) {
+                        console.error("Error conectando con el cerebro del bot:", err);
+                        await processingMsgRef.update({
+                            text: '⚠️ Error de conexión. No pude generar el resumen.'
+                        });
+                    }
                 }
 
             } catch (error) {
-                console.error("Error subiendo archivo:", error);
+                console.error("Error general subiendo archivo:", error);
                 alert("Hubo un error al subir el archivo.");
             }
         }
@@ -1942,9 +1974,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } else if (msg.contentType === 'file' && msg.fileUrl) {
                     contentHTML = `<a href="${msg.fileUrl}" target="_blank" class="file-attachment"><i class="fa-solid fa-file-arrow-down"></i> ${escapeHTML(msg.fileName || 'Descargar archivo')}</a>`;
                 } else {
-                    // AQUÍ ESTÁ EL CAMBIO CLAVE PARA LA ANIMACIÓN
-                    // Si es usuario, muestra el texto normal.
-                    // Si es bot, creamos un contenedor vacío (.bot-text-container) para llenarlo luego.
                     contentHTML = (msg.type === 'user') ? `<p>${escapeHTML(msg.text || '')}</p>` : `<p class="bot-text-container"></p>`;
                 }
                 if (msg.type === 'bot' && msg.rating !== undefined) {
@@ -1965,16 +1994,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 chatMessages.appendChild(chatMessageElement);
             }
 
-            // Lógica para ejecutar la animación SOLO si es un mensaje de texto del bot
             if (msg.type === 'bot' && msg.text && msg.contentType === 'text') {
                 const textContainer = chatMessageElement.querySelector('.bot-text-container');
                 if (textContainer) {
                     if (animate) {
-                        // Usamos la función typewriterEffect global
                         if (typeof typewriterEffect !== 'undefined') typewriterEffect(textContainer, msg.text);
                         else textContainer.textContent = msg.text;
                     } else {
-                        // Si es carga de historial, mostramos de golpe
                         textContainer.textContent = msg.text;
                     }
                 }

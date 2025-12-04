@@ -17,6 +17,9 @@ import time
 import nltk
 import gc 
 
+from PyPDF2 import PdfReader
+from docx import Document
+
 from conocimiento import (
     obtener_respuesta_py,
     buscar_pictogramas_py,
@@ -311,6 +314,96 @@ def _update_response_metrics(response_time, success=True):
         print(f"!! ADVERTENCIA: No se pudo actualizar métricas de respuesta: {e}")
 
 # --- RUTAS ---
+@app.route('/api/process_document', methods=['POST'])
+def process_document():
+    """
+    Procesa un documento (PDF o DOCX) desde una URL y devuelve un resumen.
+    ---
+    tags:
+      - Documentos
+    parameters:
+      - name: body
+        in: body
+        required: true
+        description: JSON con la URL del archivo y el tipo
+        schema:
+          type: object
+          required:
+            - fileUrl
+            - fileType
+          properties:
+            fileUrl:
+              type: string
+              example: "https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf"
+            fileType:
+              type: string
+              example: "pdf"
+    responses:
+      200:
+        description: Resumen generado correctamente
+      400:
+        description: Error en los parámetros o descarga
+      500:
+        description: Error al procesar el archivo
+    """
+    data = request.json
+    file_url = data.get('fileUrl')
+    file_type = data.get('fileType') 
+
+    if not file_url:
+        return jsonify({"error": "Falta la URL del archivo"}), 400
+
+    temp_path = ""
+
+    try:
+        data = request.json
+        file_url = data.get('fileUrl')
+        file_type = data.get('fileType')
+
+        if not file_url:
+            return jsonify({"status": "error", "message": "Falta URL"}), 400
+
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(file_url, headers=headers, timeout=15)
+        
+        ext = ".pdf" if "pdf" in file_type.lower() else ".docx"
+        fd, temp_path = tempfile.mkstemp(suffix=ext)
+        with os.fdopen(fd, 'wb') as tmp:
+            tmp.write(response.content)
+
+        text_content = ""
+
+        if "pdf" in file_type.lower():
+            reader = PdfReader(temp_path)
+            for i, page in enumerate(reader.pages):
+                if i > 1: break 
+                text = page.extract_text()
+                if text: text_content += text + " "
+        
+        elif "docx" in file_type.lower() or "doc" in file_type.lower():
+            doc = Document(temp_path)
+            for para in doc.paragraphs:
+                text_content += para.text + " "
+
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
+        text_content = " ".join(text_content.split())
+        
+        if not text_content:
+            return jsonify({"status": "success", "summary": "No pude leer texto de este archivo (quizás es una imagen escaneada)."}), 200
+
+        summary = text_content[:400] + "..."
+        
+        respuesta_bot = f"📄 **He leído tu archivo.** Aquí tienes un pequeño resumen:\n\n_{summary}_"
+
+        return jsonify({"status": "success", "summary": respuesta_bot}), 200
+
+    except Exception as e:
+        print(f"Error doc: {e}")
+        return jsonify({"status": "error", "message": "No pude procesar el archivo."}), 500
+        
+
 @app.route('/api/admin/create_user', methods=['POST'])
 def admin_create_user():
     """

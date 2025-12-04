@@ -3497,3 +3497,47 @@ body.role-padre .historial-dot {
     color: #50BB69;
     border: 1px solid #50BB69;
 }
+
+.file-attachment {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background-color: rgba(0, 0, 0, 0.2); 
+    padding: 12px 16px;
+    border-radius: 12px;
+    color: #ffffff !important; 
+    text-decoration: none;
+    font-weight: 500;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    transition: background 0.3s ease;
+    max-width: 100%;
+}
+
+.file-attachment:hover {
+    background-color: rgba(0, 0, 0, 0.4);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.file-attachment i {
+    font-size: 1.5rem;
+    color: #df5f5b; 
+}
+
+.bot-summary-card {
+    background-color: #15202b; 
+    border-left: 4px solid #50BB69; 
+    padding: 12px;
+    margin-top: 8px;
+    border-radius: 4px;
+    font-size: 0.95em;
+    color: #e1e8ed;
+    line-height: 1.5;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.bot-summary-title {
+    font-weight: bold;
+    color: #ffffff;
+    margin-bottom: 5px;
+    display: block;
+}
