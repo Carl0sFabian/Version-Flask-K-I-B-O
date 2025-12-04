@@ -313,6 +313,46 @@ def _update_response_metrics(response_time, success=True):
 # --- RUTAS ---
 @app.route('/api/admin/create_user', methods=['POST'])
 def admin_create_user():
+    """
+    Crea un nuevo usuario en Firebase Auth y Firestore.
+    ---
+    tags:
+      - Admin
+    parameters:
+      - name: body
+        in: body
+        required: true
+        description: Datos del nuevo usuario
+        schema:
+          type: object
+          required:
+            - name
+            - email
+            - password
+            - role
+          properties:
+            name:
+              type: string
+              example: "Juan Perez"
+            email:
+              type: string
+              example: "juan@ejemplo.com"
+            password:
+              type: string
+              example: "secret123"
+            role:
+              type: string
+              example: "alumno"
+    responses:
+      201:
+        description: Usuario creado exitosamente
+      400:
+        description: Faltan datos o contraseña inválida
+      409:
+        description: El email ya existe
+      500:
+        description: Error del servidor
+    """
     if db is None:
         return jsonify({"error": "Error interno del servidor: La base de datos no está conectada."}), 500
 
@@ -360,7 +400,6 @@ def admin_create_user():
         traceback.print_exc()
         return jsonify({"error": "Error interno al procesar la solicitud."}), 500
 
-
 @app.route('/index_alumno')
 def index_alumno():
     return render_template('index_alumno.html')
@@ -393,6 +432,37 @@ def login():
 
 @app.route('/api/get_bot_response', methods=['POST'])
 def handle_chat_message():
+    """
+    Envía texto al bot y recibe una respuesta procesada.
+    ---
+    tags:
+      - Chat
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          required:
+            - text
+            - chatId
+          properties:
+            text:
+              type: string
+              description: El mensaje del usuario
+              example: "Hola, ¿cómo estás?"
+            chatId:
+              type: string
+              description: ID único del chat para guardar historial
+              example: "chat_12345"
+    responses:
+      200:
+        description: Respuesta generada y guardada correctamente
+      400:
+        description: Faltan parámetros
+      500:
+        description: Error interno
+    """
     if db is None:
         return jsonify({"error": "Error interno del servidor."}), 500
 
@@ -420,11 +490,11 @@ def handle_chat_message():
         traceback.print_exc()
         return jsonify({"error": "Ocurrió un error interno en el servidor."}), 500
 
-
 @app.route('/api/process_audio', methods=['POST'])
 def process_audio():
     """
-    Procesa audio con carga perezosa de Whisper para optimizar memoria en Render (Plan 2GB).
+    Procesa una URL de audio.
+    IMPORTANTE: Debes enviar una URL pública (https://...), no un archivo local.
     ---
     tags:
       - Audio
@@ -432,6 +502,7 @@ def process_audio():
       - name: body
         in: body
         required: true
+        description: JSON con la URL del audio y IDs
         schema:
           type: object
           required:
@@ -441,99 +512,99 @@ def process_audio():
           properties:
             audioUrl:
               type: string
+              example: "https://upload.wikimedia.org/wikipedia/commons/c/c8/Example.ogg"
             chatId:
               type: string
+              example: "chat_test_1"
             messageId:
               type: string
+              example: "msg_test_1"
     responses:
       200:
-        description: Audio procesado
+        description: Transcripción exitosa
+      400:
+        description: Faltan datos o URL inválida
+      500:
+        description: Error al descargar o procesar
     """
     if db is None:
-        return jsonify({"error": "Error interno: Base de datos no disponible."}), 500
+        return jsonify({"error": "Base de datos no disponible."}), 500
 
     start_time = time.time()
     temp_path = "" 
 
     try:
-        print("\n--- [PROCESANDO AUDIO - INICIO] ---")
+        print("\n--- [PROCESANDO AUDIO] ---")
         data = request.json
+        
+        if not data:
+            return jsonify({"error": "Debes enviar un JSON body, no form-data."}), 400
+
         audio_url = data.get('audioUrl')
         chat_id = data.get('chatId')
         message_id = data.get('messageId')
 
         if not all([audio_url, chat_id, message_id]):
-            return jsonify({"error": "Faltan parámetros en la solicitud."}), 400
+            return jsonify({"error": "Faltan parámetros: audioUrl, chatId, o messageId"}), 400
+
+        if not audio_url.startswith('http'):
+            return jsonify({"error": f"La URL '{audio_url}' no es válida. Debe empezar con http o https."}), 400
 
         print(f"Descargando audio de: {audio_url}")
-        response = requests.get(audio_url)
-        response.raise_for_status()
+        
+        # --- CORRECCIÓN AQUÍ: AGREGAMOS USER-AGENT ---
+        # Esto engaña al servidor para que crea que somos un navegador
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+        
+        try:
+            # Pasamos los headers aquí
+            response = requests.get(audio_url, headers=headers, timeout=10) 
+            response.raise_for_status()
+        except Exception as download_error:
+            print(f"Error descargando: {download_error}")
+            return jsonify({"error": f"No se pudo descargar el audio. El servidor bloqueó la conexión o el enlace está roto. Error: {str(download_error)}"}), 400
         
         temp_dir = tempfile.gettempdir() 
         temp_path = os.path.join(temp_dir, f"{message_id}.webm")
         with open(temp_path, "wb") as f:
             f.write(response.content)
 
-        print("Cargando librería Whisper...")
+        print("Cargando Whisper...")
         from faster_whisper import WhisperModel
-        
-        print("Inicializando modelo Whisper 'small' en CPU...")
         model = WhisperModel("small", device="cpu", compute_type="int8")
 
-        print("Iniciando transcripción (beam_size=1)...")
-        segments, info = model.transcribe(
-            temp_path, 
-            language="es", 
-            vad_filter=True,
-            beam_size=1 
-        )
+        segments, _ = model.transcribe(temp_path, language="es", beam_size=1)
         
-        valid_segments = []
+        text_segments = [s.text for s in segments]
+        transcribed_text = " ".join(text_segments).strip()
         
-        for i, segment in enumerate(segments):
-            print(f"  -> Segmento {i+1}: {segment.text[:40]}...")
-            if segment.no_speech_prob < 0.6: 
-                valid_segments.append(segment.text)
+        if not transcribed_text:
+            transcribed_text = "[RUIDO_DETECTADO]"
 
-        transcribed_text = " ".join(valid_segments).strip()
-        print("Transcripción finalizada.")
+        print(f"Transcripción: {transcribed_text}")
         
         del model
         gc.collect()
-        print("Modelo eliminado de memoria RAM.")
-
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
-        user_display_text = transcribed_text
-        if not transcribed_text:
-            print("Audio vacío o puro ruido detectado.")
-            transcribed_text = "[RUIDO_DETECTADO]"
-            user_display_text = "🔇 [Audio no entendido / Ruido]"
-
-        print(f"Texto resultante: {transcribed_text}")
-
-        message_ref = db.collection('chats').document(chat_id).collection('messages').document(message_id)
-        message_ref.set({
-            "text": user_display_text
+        db.collection('chats').document(chat_id).collection('messages').document(message_id).set({
+            "text": transcribed_text
         }, merge=True)
         
         _generate_and_save_bot_response(transcribed_text, chat_id)
 
-        response_time = time.time() - start_time
-        _update_response_metrics(response_time, success=True)
-
         return jsonify({"status": "success", "transcription": transcribed_text}), 200
 
     except Exception as e:
-        print(f"!! ERROR CRÍTICO EN AUDIO: {e}")
+        print(f"!! ERROR CRÍTICO: {e}")
         traceback.print_exc()
-        
         if temp_path and os.path.exists(temp_path):
-            os.remove(temp_path)
-            
+            try: os.remove(temp_path)
+            except: pass
         return jsonify({"status": "error", "message": str(e)}), 500
-
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
