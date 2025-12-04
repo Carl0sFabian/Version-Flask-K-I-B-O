@@ -82,7 +82,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     window.showToast = showToast;
 
-    // --- LÓGICA DE MONITOREO Y VINCULACIÓN (MOVIDA A ESTE ÁMBITO) ---
+    // --- EFECTO DE ESCRITURA (TYPEWRITER) ---
+    // Esta es la función que faltaba para la animación
+    function typewriterEffect(element, text, speed = 15) {
+        let i = 0;
+        element.textContent = ""; // Limpiar contenido inicial
+
+        function typing() {
+            if (i < text.length) {
+                element.textContent += text.charAt(i);
+                i++;
+
+                // Auto-scroll para seguir el texto mientras se escribe
+                const chatArea = document.querySelector('.chat-area');
+                if (chatArea) {
+                    chatArea.scrollTop = chatArea.scrollHeight;
+                }
+
+                setTimeout(typing, speed);
+            }
+        }
+        typing();
+    }
+    // Hacemos la función accesible globalmente por si acaso
+    window.typewriterEffect = typewriterEffect;
+
+
+    // --- LÓGICA DE MONITOREO Y VINCULACIÓN ---
 
     async function loadTeachersForSelects() {
         const monitorSelect = document.getElementById('teacher-monitor-select');
@@ -1125,32 +1151,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         }
                                     }
                                 }
-                            }
-                        },
-                        plugins: [{
-                            id: 'textCenter',
-                            beforeDraw: function (chart) {
-                                var width = chart.width,
-                                    height = chart.height,
-                                    ctx = chart.ctx;
+                            },
+                            plugins: [{
+                                id: 'textCenter',
+                                beforeDraw: function (chart) {
+                                    var width = chart.width,
+                                        height = chart.height,
+                                        ctx = chart.ctx;
 
-                                ctx.restore();
-                                var fontSize = (height / 100).toFixed(2);
-                                ctx.font = "bold " + fontSize + "em sans-serif";
-                                ctx.textBaseline = "middle";
-                                ctx.fillStyle = "#fff";
+                                    ctx.restore();
+                                    var fontSize = (height / 100).toFixed(2);
+                                    ctx.font = "bold " + fontSize + "em sans-serif";
+                                    ctx.textBaseline = "middle";
+                                    ctx.fillStyle = "#fff";
 
-                                var total = data.unlocked + data.locked;
-                                var percentage = total > 0 ? Math.round((data.unlocked / total) * 100) + "%" : "0%";
+                                    var total = data.unlocked + data.locked;
+                                    var percentage = total > 0 ? Math.round((data.unlocked / total) * 100) + "%" : "0%";
 
-                                var text = percentage,
-                                    textX = Math.round((width - ctx.measureText(text).width) / 2),
-                                    textY = height / 2;
+                                    var text = percentage,
+                                        textX = Math.round((width - ctx.measureText(text).width) / 2),
+                                        textY = height / 2;
 
-                                ctx.fillText(text, textX, textY);
-                                ctx.save();
-                            }
-                        }]
+                                    ctx.fillText(text, textX, textY);
+                                    ctx.save();
+                                }
+                            }]
+                        }
                     });
                 });
 
@@ -1612,6 +1638,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             if (existingMessageElement) {
                                 renderMessage(msgData, false, existingMessageElement);
                             } else if (change.type === 'added') {
+                                // Aquí llamamos a la animación solo si NO es carga inicial y el mensaje es del BOT
                                 const shouldAnimate = !isInitialLoad && msgData.type === 'bot';
                                 renderMessage(msgData, shouldAnimate, null);
                             }
@@ -1915,6 +1942,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 } else if (msg.contentType === 'file' && msg.fileUrl) {
                     contentHTML = `<a href="${msg.fileUrl}" target="_blank" class="file-attachment"><i class="fa-solid fa-file-arrow-down"></i> ${escapeHTML(msg.fileName || 'Descargar archivo')}</a>`;
                 } else {
+                    // AQUÍ ESTÁ EL CAMBIO CLAVE PARA LA ANIMACIÓN
+                    // Si es usuario, muestra el texto normal.
+                    // Si es bot, creamos un contenedor vacío (.bot-text-container) para llenarlo luego.
                     contentHTML = (msg.type === 'user') ? `<p>${escapeHTML(msg.text || '')}</p>` : `<p class="bot-text-container"></p>`;
                 }
                 if (msg.type === 'bot' && msg.rating !== undefined) {
@@ -1934,13 +1964,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!isUpdate) {
                 chatMessages.appendChild(chatMessageElement);
             }
+
+            // Lógica para ejecutar la animación SOLO si es un mensaje de texto del bot
             if (msg.type === 'bot' && msg.text && msg.contentType === 'text') {
                 const textContainer = chatMessageElement.querySelector('.bot-text-container');
                 if (textContainer) {
                     if (animate) {
+                        // Usamos la función typewriterEffect global
                         if (typeof typewriterEffect !== 'undefined') typewriterEffect(textContainer, msg.text);
                         else textContainer.textContent = msg.text;
                     } else {
+                        // Si es carga de historial, mostramos de golpe
                         textContainer.textContent = msg.text;
                     }
                 }
