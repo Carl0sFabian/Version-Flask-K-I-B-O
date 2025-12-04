@@ -15,7 +15,7 @@ import black
 import datetime
 import time
 import nltk
-import gc # Importante para limpiar memoria RAM manualmente
+import gc 
 
 from conocimiento import (
     obtener_respuesta_py,
@@ -26,8 +26,6 @@ from conocimiento import (
     normalizar_texto
 )
 
-# NOTA: No importamos WhisperModel aquí arriba para ahorrar memoria al inicio.
-# Se importará dentro de la función process_audio.
 
 app = Flask(__name__)
 
@@ -127,7 +125,6 @@ def _generate_and_save_bot_response(user_text, chat_id):
         print(f"\n--- [Generando respuesta para ChatID: {chat_id}] ---")
         print(f"Texto de entrada: {user_text}")
 
-        # Guardar métricas (Intento simple)
         try:
             today_str = datetime.date.today().strftime('%Y-%m-%d')
             metrics_ref = db.collection('botMetrics').document(today_str)
@@ -198,7 +195,6 @@ def _generate_and_save_bot_response(user_text, chat_id):
                     print("Consultando modelo Q&A...")
                     bot_response_text = obtener_respuesta_py(user_text) 
 
-        # Guardar en Firestore con formato
         chat_ref = db.collection('chats').document(chat_id)
         
         code_pattern = re.compile(r"```(\w*)\s*(.*?)\s*```", re.DOTALL)
@@ -315,12 +311,8 @@ def _update_response_metrics(response_time, success=True):
         print(f"!! ADVERTENCIA: No se pudo actualizar métricas de respuesta: {e}")
 
 # --- RUTAS ---
-
 @app.route('/api/admin/create_user', methods=['POST'])
 def admin_create_user():
-    # ... (Sin cambios en tu lógica de creación de usuario) ...
-    # Para ahorrar espacio aquí, asumo que mantienes tu lógica original de create_user.
-    # Si la necesitas completa pídela, pero es idéntica a la que me pasaste.
     if db is None:
         return jsonify({"error": "Error interno del servidor: La base de datos no está conectada."}), 500
 
@@ -473,7 +465,6 @@ def process_audio():
         if not all([audio_url, chat_id, message_id]):
             return jsonify({"error": "Faltan parámetros en la solicitud."}), 400
 
-        # 1. Descargar Audio
         print(f"Descargando audio de: {audio_url}")
         response = requests.get(audio_url)
         response.raise_for_status()
@@ -483,17 +474,12 @@ def process_audio():
         with open(temp_path, "wb") as f:
             f.write(response.content)
 
-        # 2. Cargar Whisper (Lazy Loading)
-        # Importamos AQUÍ para que solo ocupe RAM cuando se necesite
         print("Cargando librería Whisper...")
         from faster_whisper import WhisperModel
         
-        # Usamos modelo 'small' (buen balance para 2GB)
         print("Inicializando modelo Whisper 'small' en CPU...")
         model = WhisperModel("small", device="cpu", compute_type="int8")
 
-        # 3. Transcribir
-        # beam_size=1 para máxima velocidad y evitar timeouts
         print("Iniciando transcripción (beam_size=1)...")
         segments, info = model.transcribe(
             temp_path, 
@@ -504,9 +490,7 @@ def process_audio():
         
         valid_segments = []
         
-        # Iteramos explícitamente para ver progreso en logs
         for i, segment in enumerate(segments):
-            # Este print es vital para saber que el proceso no se ha colgado
             print(f"  -> Segmento {i+1}: {segment.text[:40]}...")
             if segment.no_speech_prob < 0.6: 
                 valid_segments.append(segment.text)
@@ -514,16 +498,13 @@ def process_audio():
         transcribed_text = " ".join(valid_segments).strip()
         print("Transcripción finalizada.")
         
-        # 4. LIMPIEZA DE MEMORIA
         del model
         gc.collect()
         print("Modelo eliminado de memoria RAM.")
 
-        # Limpiar archivo temporal
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
-        # 5. Lógica de respuesta
         user_display_text = transcribed_text
         if not transcribed_text:
             print("Audio vacío o puro ruido detectado.")
@@ -532,13 +513,11 @@ def process_audio():
 
         print(f"Texto resultante: {transcribed_text}")
 
-        # Guardar mensaje del usuario en Firestore
         message_ref = db.collection('chats').document(chat_id).collection('messages').document(message_id)
         message_ref.set({
             "text": user_display_text
         }, merge=True)
         
-        # Generar respuesta del bot
         _generate_and_save_bot_response(transcribed_text, chat_id)
 
         response_time = time.time() - start_time
@@ -550,7 +529,6 @@ def process_audio():
         print(f"!! ERROR CRÍTICO EN AUDIO: {e}")
         traceback.print_exc()
         
-        # Intentar borrar temporal si falló
         if temp_path and os.path.exists(temp_path):
             os.remove(temp_path)
             
