@@ -191,7 +191,7 @@ print("Entrenando clasificador de intenciones...")
 
 data_intents = {
   "saludo": [
-    "hola", "buenas", "buenos dias", "que tal", "buenas tardes", "hey", "como estas", "hola, que tal", "buen dia", "holi"
+    "hola", "buenas", "buenos dias", "que tal", "buenas tardes", "hey", "como estas", "hola, que tal", "buen dia", "holi","hi","holaaaa"
   ],
   "pedir_objeto": [
     "dame la pelota", "quiero un juguete", "puedes darme el libro", "necesito mi mochila", "pasame el lapiz", "traeme un vaso de agua"
