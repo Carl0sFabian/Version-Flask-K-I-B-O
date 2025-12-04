@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Información Legal y API - K-I-B-O</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        header p {
+            font-size: 1.2em;
+            color: #7f8c8d;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 30px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border-left: 5px solid var(--accent-color);
+        }
+
+        h2 {
+            color: var(--primary-color);
+            margin-top: 0;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        h3 {
+            color: var(--accent-color);
+            margin-top: 20px;
+        }
+
+        ul, ol {
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 10px;
+        }
+
+        .api-btn {
+            display: block;
+            width: 100%;
+            text-align: center;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1.1em;
+            transition: background 0.3s;
+            margin-top: 20px;
+        }
+
+        .api-btn:hover {
+            background-color: var(--accent-color);
+        }
+
+        .disclaimer {
+            background-color: #fff3cd;
+            color: #856404;
+            border-left-color: #ffc107;
+            font-size: 0.95em;
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 50px;
+            padding: 20px;
+            color: #bdc3c7;
+            font-size: 0.9em;
+        }
+        
+        .logo-upc {
+            font-weight: bold;
+            color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>K-I-B-O</h1>
+            <p>Asistente Educativo basado en Inteligencia Artificial</p>
+        </header>
+
+        <div class="card">
+            <h2><i class="fas fa-robot"></i> Sobre el Proyecto</h2>
+            <p>
+                <strong>K-I-B-O</strong> es un prototipo de chatbot inclusivo diseñado para facilitar la comunicación y el aprendizaje en niños con <strong>Trastorno del Espectro Autista (TEA)</strong>[cite: 66].
+            </p>
+            <p>El sistema utiliza tecnologías avanzadas para crear un entorno seguro:</p>
+            <ul>
+                <li><strong>Procesamiento de Lenguaje Natural (NLP):</strong> Modelos entrenados (Word2Vec, LSTM) para entender intenciones y responder preguntas[cite: 285].</li>
+                <li><strong>Soporte Visual (SAAC):</strong> Integración con la API de <strong>ARASAAC</strong> para mostrar pictogramas que refuerzan la comprensión[cite: 84].</li>
+                <li><strong>Reconocimiento de Voz:</strong> Uso del modelo <strong>Whisper</strong> para transcribir mensajes de audio, permitiendo accesibilidad a niños con dificultades de escritura[cite: 621].</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2><i class="fas fa-shield-alt"></i> Privacidad y Manejo de Datos</h2>
+            <p>Este proyecto sigue lineamientos éticos estrictos para la protección de los usuarios:</p>
+            
+            <h3>1. Uso de Datos Personales</h3>
+            <p>El sistema cuenta con roles diferenciados (Alumno, Profesor, Padre) para garantizar la supervisión[cite: 608]. No compartimos información personal sensible (PII) con servicios de terceros. Solo se envían palabras clave normalizadas a la API de ARASAAC[cite: 557].</p>
+
+            <h3>2. Procesamiento de Audio</h3>
+            <p>Los audios enviados se procesan temporalmente para su transcripción a texto mediante el modelo Whisper y posteriormente se almacenan las interacciones en <strong>Firebase Firestore</strong> para mantener el historial del chat [cite: 846-850].</p>
+
+            <h3>3. Base de Conocimiento</h3>
+            <p>Las respuestas del bot se generan a partir de modelos entrenados con datasets educativos y cuentos infantiles (como <em>FairytaleQA</em>), asegurando contenido apropiado para menores[cite: 107].</p>
+        </div>
+
+        <div class="card">
+            <h2><i class="fas fa-code"></i> Para Desarrolladores: API REST</h2>
+            <p>K-I-B-O expone una API RESTful documentada bajo el estándar <strong>OpenAPI (Swagger)</strong>. Esto permite la integración con otras interfaces o sistemas de monitoreo.</p>
+            
+            <p><strong>Endpoints Principales:</strong></p>
+            <ul>
+                <li><code>POST /api/get_bot_response</code>: Procesa texto y devuelve respuesta con pictogramas[cite: 200].</li>
+                <li><code>POST /api/process_audio</code>: Recibe una URL de audio y devuelve la transcripción[cite: 617].</li>
+                <li><code>POST /api/process_document</code>: Resume documentos PDF/DOCX educativos.</li>
+            </ul>
+
+            <a href="/apidocs/" class="api-btn" target="_blank">
+                <i class="fas fa-book"></i> Ver Documentación Interactiva (Swagger)
+            </a>
+        </div>
+
+        <div class="card disclaimer">
+            <h2><i class="fas fa-exclamation-triangle"></i> Importante</h2>
+            <p>
+                K-I-B-O es una herramienta tecnológica de <strong>asistencia y acompañamiento</strong>. No busca reemplazar la terapia profesional ni la intervención de psicólogos o padres, sino complementarla para potenciar la autonomía del niño.
+            </p>
+            <p>
+                Las respuestas generadas por la IA pueden contener imprecisiones. Se recomienda siempre la supervisión de un adulto[cite: 647].
+            </p>
+        </div>
+
+        <footer>
+            <span class="logo-upc">Universidad Peruana de Ciencias Aplicadas (UPC)</span></p>
+            <a href="/" style="color: #3498db; text-decoration: none;">&larr; Volver al Inicio</a>
+        </footer>
+    </div>
+
+</body>
+</html>

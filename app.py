@@ -522,6 +522,12 @@ def index():
 def login():
     return render_template('login.html')
 
+@app.route('/tos')
+def terms_of_service():
+    """
+    Muestra la página de Términos de Servicio y documentación del proyecto.
+    """
+    return render_template('tos.html')
 
 @app.route('/api/get_bot_response', methods=['POST'])
 def handle_chat_message():
