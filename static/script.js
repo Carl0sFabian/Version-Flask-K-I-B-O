@@ -1670,6 +1670,25 @@ document.addEventListener('DOMContentLoaded', async () => {
             const chatRef = db.collection('chats').doc(currentChatId);
             chatRef.collection('messages').add(messageData)
                 .then(() => {
+                    // Disparar demo dinámica: mensaje de usuario (misma pestaña)
+                    try {
+                        console.log('[KIBO-DEMO] Dispatch desde chat (usuario):', { input: texto });
+                        const payload = { input: texto };
+                        window.dispatchEvent(new CustomEvent('kibo-demo-mensaje', { detail: payload }));
+                        // Propagar a otras pestañas mediante localStorage
+                        localStorage.setItem('kibo-demo-last', JSON.stringify({
+                            type: 'user',
+                            at: Date.now(),
+                            data: payload
+                        }));
+                        // Limpieza rápida para evitar cola de eventos antiguos
+                        setTimeout(() => {
+                            try { localStorage.removeItem('kibo-demo-last'); } catch (_) {}
+                        }, 100);
+                    } catch (e) {
+                        console.error('[KIBO-DEMO] Error al hacer dispatch de evento usuario:', e);
+                    }
+
                     messageInput.value = "";
                     return chatRef.update({
                         userMessageCount: firebase.firestore.FieldValue.increment(1)
@@ -2004,11 +2023,37 @@ document.addEventListener('DOMContentLoaded', async () => {
                         textContainer.textContent = msg.text;
                     }
                 }
+
+                // Disparar demo dinámica: respuesta del bot + datos de intención si existen
+                try {
+                    const payload = {
+                        input: msg.userTextOriginal || '',
+                        intentRecognized: !!msg.intentName,
+                        intentName: msg.intentName || '',
+                        response: msg.text || ''
+                    };
+                    console.log('[KIBO-DEMO] Dispatch desde chat (bot):', payload);
+                    // Misma pestaña
+                    window.dispatchEvent(new CustomEvent('kibo-demo-mensaje', { detail: payload }));
+                    // Otras pestañas
+                    localStorage.setItem('kibo-demo-last', JSON.stringify({
+                        type: 'bot',
+                        at: Date.now(),
+                        data: payload
+                    }));
+                    setTimeout(() => {
+                        try { localStorage.removeItem('kibo-demo-last'); } catch (_) {}
+                    }, 100);
+                } catch (e) {
+                    console.error('[KIBO-DEMO] Error al hacer dispatch de evento bot:', e);
+                }
+
                 const ratingStarsElement = chatMessageElement.querySelector('.rating-stars');
                 if (ratingStarsElement && msg.id) {
                     initializeRating(ratingStarsElement, msg.id);
                 }
             }
+
             const customPlayer = chatMessageElement.querySelector('.custom-audio-player');
             if (customPlayer && !customPlayer.classList.contains('initialized')) {
                 setTimeout(() => {

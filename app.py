@@ -45,13 +45,23 @@ swagger_config = {
     ],
     "static_url_path": "/flasgger_static",
     "swagger_ui": True,
-    "specs_route": "/apidocs/",
+    "specs_route": "/flasgger_apidocs/",
     "title": "API de Asistente Educativo",
     "version": "1.0.0",
     "description": "Documentación interactiva de los endpoints del Asistente IA"
 }
 
 swagger = Swagger(app, config=swagger_config)
+
+
+@app.route('/apidocs/')
+def apidocs_custom():
+    return render_template('apidocs_custom.html')
+
+# Nuevo endpoint que muestra solo la palabra 'hola' en /apidocs/diagramas
+@app.route('/apidocs/diagramas')
+def apidocs_diagramas():
+    return render_template('apidocs_diagramas.html')
 
 INITIAL_CLASSIFICATION_THRESHOLD = 0.03
 db = None

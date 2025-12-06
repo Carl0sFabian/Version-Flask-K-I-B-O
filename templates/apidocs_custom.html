@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Documentación API - K-I-B-O</title>
+  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist/swagger-ui.css" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='apidocs.css') }}">
+</head>
+<body>
+  <div class="top-link-wrap">
+    <a href="/apidocs/diagramas" class="top-link-button">Diagramas</a>
+  </div>
+
+  <div id="swagger-ui"></div>
+
+  <script src="https://unpkg.com/swagger-ui-dist/swagger-ui-bundle.js"></script>
+  <script>
+    window.onload = function() {
+      const ui = SwaggerUIBundle({
+        url: '/apispec.json',
+        dom_id: '#swagger-ui',
+        deepLinking: true,
+        presets: [
+          SwaggerUIBundle.presets.apis,
+          SwaggerUIBundle.SwaggerUIStandalonePreset
+        ],
+        layout: 'BaseLayout'
+      });
+
+      const toggle = document.getElementById('myToggle');
+      const holaText = document.getElementById('holaText');
+      toggle.addEventListener('change', function() {
+        if (this.checked) holaText.style.display = 'inline'; else holaText.style.display = 'none';
+      });
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Diagramas de Flujo - API K-I-B-O</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='apidocs.css') }}" />
+  <!-- Carga de Mermaid en formato UMD (no módulo) -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <!-- Librería para zoom/pan sobre SVG -->
+  <script src="https://cdn.jsdelivr.net/npm/svg-pan-zoom@3.6.1/dist/svg-pan-zoom.min.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      mermaid.initialize({
+        startOnLoad: false,
+        theme: "dark",
+        securityLevel: "loose",
+        themeVariables: {
+          primaryColor: "#0b3b60",
+          primaryTextColor: "#EBF0F5",
+          primaryBorderColor: "#2196F3",
+          lineColor: "#2196F3",
+          secondaryColor: "#072146",
+          tertiaryColor: "#0e4f73",
+        },
+      });
+
+      function activarZoomEnDiagramas() {
+        document.querySelectorAll('.mermaid svg').forEach(function (svg) {
+          if (svg.getAttribute('data-panzoom-init') === '1') return;
+
+          // En los diagramas embebidos NO mostramos los botones + reset -
+          var panZoom = svgPanZoom(svg, {
+            zoomEnabled: true,
+            controlIconsEnabled: false,
+            fit: true,
+            center: true,
+            maxZoom: 3,
+            minZoom: 0.5,
+            zoomScaleSensitivity: 0.4,
+            contain: true
+          });
+
+          panZoom.resize();
+          panZoom.fit();
+          panZoom.center();
+
+          requestAnimationFrame(function () {
+            panZoom.resize();
+            panZoom.fit();
+            panZoom.center();
+          });
+
+          window.addEventListener('resize', function () {
+            panZoom.resize();
+            panZoom.fit();
+            panZoom.center();
+          });
+
+          svg.setAttribute('data-panzoom-init', '1');
+        });
+      }
+
+      function initFullscreenModal() {
+        const backdrop = document.getElementById('diagram-modal-backdrop');
+        const bodyWrap = document.getElementById('diagram-modal-svg-wrap');
+        const closeBtn = document.getElementById('diagram-modal-close');
+        let panZoomInstance = null;
+
+        // --- Estado de demo dinámica ---
+        let demoActiva = false;
+        let demoToggleBtn = null;
+        let demoListenerRegistrado = false;
+
+        function limpiarClasesDemo(svgRoot) {
+          if (!svgRoot) return;
+          svgRoot.querySelectorAll('.kibo-demo-highlight, .kibo-demo-pulse').forEach(function (el) {
+            el.classList.remove('kibo-demo-highlight', 'kibo-demo-pulse');
+          });
+          svgRoot.querySelectorAll('.kibo-demo-label').forEach(function (el) {
+            el.remove();
+          });
+        }
+
+        function crearLabel(svgRoot, targetBBox, texto) {
+          if (!svgRoot || !targetBBox) return;
+          const ns = 'http://www.w3.org/2000/svg';
+          const g = document.createElementNS(ns, 'g');
+          g.setAttribute('class', 'kibo-demo-label');
+
+          const paddingX = 6;
+          const paddingY = 4;
+          const x = targetBBox.x + targetBBox.width / 2;
+          const y = targetBBox.y - 10;
+
+          const rect = document.createElementNS(ns, 'rect');
+          rect.setAttribute('rx', '4');
+          rect.setAttribute('ry', '4');
+          rect.setAttribute('fill', 'rgba(3,27,52,0.9)');
+          rect.setAttribute('stroke', '#64b5f6');
+          rect.setAttribute('stroke-width', '1');
+
+          const text = document.createElementNS(ns, 'text');
+          text.setAttribute('fill', '#e3f2fd');
+          text.setAttribute('font-size', '10');
+          text.setAttribute('text-anchor', 'middle');
+          text.setAttribute('x', x);
+          text.setAttribute('y', y);
+          text.textContent = texto;
+
+          svgRoot.appendChild(text);
+          const bbox = text.getBBox();
+
+          rect.setAttribute('x', bbox.x - paddingX);
+          rect.setAttribute('y', bbox.y - paddingY);
+          rect.setAttribute('width', bbox.width + paddingX * 2);
+          rect.setAttribute('height', bbox.height + paddingY * 2);
+
+          g.appendChild(rect);
+          g.appendChild(text);
+          svgRoot.appendChild(g);
+        }
+
+        function resaltarNodoPorId(svgRoot, idParcial, textoLabel, efectoPulse) {
+          if (!svgRoot) return;
+          const matches = Array.from(svgRoot.querySelectorAll('[id*="' + idParcial + '"]'));
+          if (!matches.length) return;
+
+          const target = matches[0];
+          const rectLike = target.querySelector('rect') || target;
+          const bbox = rectLike.getBBox ? rectLike.getBBox() : null;
+
+          target.classList.add('kibo-demo-highlight');
+          if (efectoPulse) {
+            target.classList.add('kibo-demo-pulse');
+          }
+
+          if (textoLabel && bbox) {
+            crearLabel(svgRoot, bbox, textoLabel);
+          }
+        }
+
+        function animarFlujoMensaje(svgRoot, data) {
+          if (!demoActiva || !svgRoot || !data) return;
+          const inputTexto = (data.input || '').trim();
+          const esReconocida = !!data.intentRecognized;
+          const intentNombre = data.intentName || (esReconocida ? 'Intención reconocida' : 'Intención desconocida');
+          const respuesta = (data.response || '').trim();
+
+          limpiarClasesDemo(svgRoot);
+
+          // Paso 1: Usuario
+          resaltarNodoPorId(svgRoot, 'U', 'Usuario escribe: "' + (inputTexto || 'Hola (...)') + '"', true);
+
+          // Paso 2: Interfaz
+          setTimeout(function () {
+            limpiarClasesDemo(svgRoot);
+            resaltarNodoPorId(svgRoot, 'I', 'Interfaz recibe el mensaje', true);
+          }, 1400);
+
+          // Paso 3: Validar mensaje
+          setTimeout(function () {
+            limpiarClasesDemo(svgRoot);
+            var detalleValidacion = 'Formato OK / Longitud: ' + (inputTexto.length || 'N/A');
+            resaltarNodoPorId(svgRoot, 'V', detalleValidacion, true);
+          }, 2800);
+
+          // Paso 4: Clasificador de Intenciones
+          setTimeout(function () {
+            limpiarClasesDemo(svgRoot);
+            var textoIntent = esReconocida ? ('Intención: ' + intentNombre) : 'Intención no reconocida';
+            resaltarNodoPorId(svgRoot, 'N', textoIntent, true);
+          }, 4200);
+
+          // Paso 5: Rama según intención
+          setTimeout(function () {
+            limpiarClasesDemo(svgRoot);
+            if (esReconocida) {
+              resaltarNodoPorId(svgRoot, 'C', 'Motor usa conocimiento + contexto', true);
+            } else {
+              resaltarNodoPorId(svgRoot, 'F', 'Respuesta por defecto / Escalada', true);
+            }
+          }, 5600);
+
+          // Paso 6: Generar respuesta en LN
+          setTimeout(function () {
+            limpiarClasesDemo(svgRoot);
+            var textoResp = respuesta || '"Hola, (...)", respuesta resumida';
+            resaltarNodoPorId(svgRoot, 'L', textoResp, true);
+          }, 7000);
+
+          // Paso 7: Enviar respuesta al usuario
+          setTimeout(function () {
+            limpiarClasesDemo(svgRoot);
+            resaltarNodoPorId(svgRoot, 'R', 'La respuesta vuelve al usuario', true);
+          }, 8400);
+
+          // Limpieza final
+          setTimeout(function () {
+            limpiarClasesDemo(svgRoot);
+          }, 9800);
+        }
+
+        function registrarListenerDemo(svgRoot) {
+          if (demoListenerRegistrado) return;
+          demoListenerRegistrado = true;
+
+          console.log('[KIBO-DEMO] Registrando listener de kibo-demo-mensaje para diagrama 1');
+
+          window.addEventListener('kibo-demo-mensaje', function (e) {
+            console.log('[KIBO-DEMO] Evento recibido en diagrama 1:', e.detail);
+            if (!demoActiva) {
+              console.log('[KIBO-DEMO] Demo dinámica está OFF, no se anima.');
+              return;
+            }
+            try {
+              if (!svgRoot) {
+                console.warn('[KIBO-DEMO] svgRoot no encontrado dentro del modal.');
+              }
+              animarFlujoMensaje(svgRoot, e.detail || {});
+            } catch (err) {
+              console.error('[KIBO-DEMO] Error al animar flujo de mensaje:', err);
+            }
+          });
+        }
+
+        window.addEventListener('storage', function (e) {
+          if (e.key !== 'kibo-demo-last') return;
+          if (!backdrop.classList.contains('diagram-modal-backdrop--visible')) return;
+
+          try {
+            const parsed = JSON.parse(e.newValue || 'null');
+            if (!parsed || !parsed.data) return;
+            const svgRoot = bodyWrap.querySelector('svg');
+            if (!svgRoot) {
+              console.warn('[KIBO-DEMO] storage event recibido pero no hay SVG en modal');
+              return;
+            }
+            console.log('[KIBO-DEMO] Evento via storage en diagramas:', parsed);
+            animarFlujoMensaje(svgRoot, parsed.data);
+          } catch (err) {
+            console.error('[KIBO-DEMO] Error parseando kibo-demo-last desde storage:', err);
+          }
+        });
+
+        function openFrom(sourceMermaid) {
+          bodyWrap.innerHTML = '';
+
+          const srcSvg = sourceMermaid.querySelector('svg');
+          if (!srcSvg) return;
+
+          const clone = srcSvg.cloneNode(true);
+          clone.removeAttribute('data-panzoom-init');
+          clone.removeAttribute('style');
+          clone.setAttribute('width', '100%');
+          clone.setAttribute('height', '100%');
+          clone.style.width = '100%';
+          clone.style.height = '100%';
+          clone.style.display = 'block';
+
+          bodyWrap.appendChild(clone);
+
+          // Crear / actualizar botón de demo dinámica sólo para diagrama 1
+          const isDiagram1 = sourceMermaid.id === 'diagram1-mermaid';
+          const header = document.querySelector('.diagram-modal__header');
+          if (header) {
+            if (!demoToggleBtn) {
+              demoToggleBtn = document.createElement('button');
+              demoToggleBtn.type = 'button';
+              demoToggleBtn.className = 'diagram-modal__demo-toggle';
+              demoToggleBtn.textContent = 'Demo dinámica: OFF';
+              demoToggleBtn.setAttribute('aria-pressed', 'false');
+              header.insertBefore(demoToggleBtn, header.firstChild);
+
+              demoToggleBtn.addEventListener('click', function () {
+                demoActiva = !demoActiva;
+                demoToggleBtn.textContent = demoActiva ? 'Demo dinámica: ON' : 'Demo dinámica: OFF';
+                demoToggleBtn.setAttribute('aria-pressed', demoActiva ? 'true' : 'false');
+                if (!demoActiva) {
+                  limpiarClasesDemo(clone);
+                }
+              });
+            }
+            demoToggleBtn.style.display = isDiagram1 ? 'inline-flex' : 'none';
+            if (!isDiagram1) {
+              demoActiva = false;
+              demoToggleBtn.textContent = 'Demo dinámica: OFF';
+              demoToggleBtn.setAttribute('aria-pressed', 'false');
+            }
+          }
+
+          backdrop.classList.add('diagram-modal-backdrop--visible');
+
+          requestAnimationFrame(function () {
+            panZoomInstance = svgPanZoom(clone, {
+              zoomEnabled: true,
+              controlIconsEnabled: true, // + reset - SOLO en el modal
+              fit: true,
+              center: true,
+              maxZoom: 8,
+              minZoom: 0.2,
+              zoomScaleSensitivity: 0.4,
+              contain: true
+            });
+
+            function ajustarModalPanZoom() {
+              panZoomInstance.resize();
+              panZoomInstance.fit();
+              panZoomInstance.center();
+            }
+
+            ajustarModalPanZoom();
+            window.addEventListener('resize', ajustarModalPanZoom);
+
+            // Registrar listener para demo sólo una vez, usando el SVG del modal
+            if (isDiagram1) {
+              registrarListenerDemo(clone);
+            }
+          });
+        }
+
+        function close() {
+          if (panZoomInstance) {
+            panZoomInstance.destroy();
+            panZoomInstance = null;
+          }
+          const svgRoot = bodyWrap.querySelector('svg');
+          if (svgRoot) limpiarClasesDemo(svgRoot);
+          backdrop.classList.remove('diagram-modal-backdrop--visible');
+          bodyWrap.innerHTML = '';
+          demoActiva = false;
+          if (demoToggleBtn) {
+            demoToggleBtn.textContent = 'Demo dinámica: OFF';
+            demoToggleBtn.setAttribute('aria-pressed', 'false');
+          }
+        }
+
+        if (closeBtn) {
+          closeBtn.addEventListener('click', close);
+        }
+
+        if (backdrop) {
+          backdrop.addEventListener('click', function (e) {
+            if (e.target === backdrop) close();
+          });
+        }
+
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape' && backdrop.classList.contains('diagram-modal-backdrop--visible')) {
+            close();
+          }
+        });
+
+        document.querySelectorAll('[data-diagram-fullscreen-target]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            const targetId = btn.getAttribute('data-diagram-fullscreen-target');
+            const mermaidEl = document.getElementById(targetId);
+            if (mermaidEl) openFrom(mermaidEl);
+          });
+        });
+      }
+
+      mermaid.run({ querySelector: '.mermaid' }).then(function () {
+        activarZoomEnDiagramas();
+
+        requestAnimationFrame(function () {
+          setTimeout(function () {
+            document.querySelectorAll('.mermaid').forEach(function (el) {
+              el.classList.remove('mermaid-init-hidden');
+              el.classList.add('mermaid-init-visible');
+            });
+          }, 50);
+        });
+
+        initFullscreenModal();
+      });
+    });
+  </script>
+</head>
+<body class="apidocs-diagramas-page">
+  <header class="topbar">
+    <a href="/apidocs" class="top-link-button">← Volver a la documentación</a>
+    <div class="topbar-title-wrap">
+      <span class="hola-text">Diagramas de Flujo de la API</span>
+    </div>
+  </header>
+
+  <main class="diagramas-main">
+    <section class="diagram-card">
+      <header class="diagram-card__header">
+        <h2>Diagrama 1</h2>
+        <p>Flujo general de funcionamiento del bot K-I-B-O desde la interacción del usuario hasta la respuesta generada.</p>
+      </header>
+      <div class="diagram-card__actions">
+        <button class="diagram-card__fullscreen-btn" data-diagram-fullscreen-target="diagram1-mermaid">
+          ⤢ Pantalla completa
+        </button>
+      </div>
+      <div class="diagram-card__body">
+        <div class="mermaid mermaid-init-hidden" id="diagram1-mermaid">
+          flowchart LR
+            U[Usuario] --> I[Interfaz Bot -Web / App / API-]
+            I --> V[Validar mensaje -formato / longitud-]
+            V --> N[Clasificador de Intenciones]
+            N -->|Intención reconocida| C[Motor de Conocimiento / Respuestas]
+            N -->|Intención no reconocida| F[Respuesta por defecto / Escalada]
+            C --> L[Generar respuesta en lenguaje natural]
+            L --> R[Enviar respuesta al Usuario]
+            F --> R
+        </div>
+      </div>
+    </section>
+
+    <section class="diagram-card">
+      <header class="diagram-card__header">
+        <h2>Diagrama 2</h2>
+        <p>Diagrama de secuencia de la comunicación entre el bot/API K-I-B-O y Firebase para autenticación y acceso a datos.</p>
+      </header>
+      <div class="diagram-card__actions">
+        <button class="diagram-card__fullscreen-btn" data-diagram-fullscreen-target="diagram2-mermaid">
+          ⤢ Pantalla completa
+        </button>
+      </div>
+      <div class="diagram-card__body">
+        <div class="mermaid mermaid-init-hidden" id="diagram2-mermaid">
+          sequenceDiagram
+            participant U as Usuario
+            participant B as Bot / API K-I-B-O
+            participant FB as Firebase (Auth / Firestore)
+
+            U->>B: Enviar mensaje / petición
+            B->>FB: Verificar token / sesión (Firebase Auth)
+            FB-->>B: Resultado de autenticación
+            alt Autenticación válida
+              B->>FB: Leer / escribir datos (historial, contexto, logs)
+              FB-->>B: Datos consultados / confirmación de escritura
+              B-->>U: Respuesta generada usando datos de Firebase
+            else Error de autenticación
+              B-->>U: Mensaje de error / solicitar ingreso nuevamente
+            end
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal fullscreen reutilizable -->
+  <div class="diagram-modal-backdrop" id="diagram-modal-backdrop">
+    <div class="diagram-modal">
+      <div class="diagram-modal__header">
+        <span class="diagram-modal__title">Vista de diagrama</span>
+        <button id="diagram-modal-close" class="diagram-modal__close" aria-label="Cerrar">×</button>
+      </div>
+      <div class="diagram-modal__body">
+        <div class="diagram-modal__svg-wrap" id="diagram-modal-svg-wrap"></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

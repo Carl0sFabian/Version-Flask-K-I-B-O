@@ -1,0 +1,389 @@
+body {
+    margin: 0;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Topbar ahora en azul oscuro */
+.topbar {
+    padding: 10px;
+    background: #072146;
+    color: #EBF0F5;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.toggle-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+/* Toggle Switch Styles */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 48px;
+    height: 24px;
+}
+
+.switch input {
+    display: none;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .2s;
+    border-radius: 24px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: .2s;
+    border-radius: 50%;
+}
+
+.switch input:checked+.slider {
+    background-color: #2196F3;
+}
+
+.switch input:checked+.slider:before {
+    transform: translateX(24px);
+}
+
+.hola-text {
+    font-weight: 600;
+    color: inherit;
+}
+
+/* Top link button that blends with original page background */
+/* El wrapper sigue el color del topbar */
+.top-link-wrap {
+    background: #072146;
+    padding: 10px;
+}
+
+.top-link-button {
+    /* ligeramente más claro que el topbar para destacar */
+    background: #0b3b60;
+    /* botón azul oscuro pero con contraste respecto al topbar */
+    color: #EBF0F5;
+    /* texto claro para buen contraste */
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    padding: 8px 14px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 700;
+    display: inline-block;
+    cursor: pointer;
+    transition: transform .15s ease, box-shadow .15s ease, opacity .15s ease, background-color .15s ease;
+    will-change: transform;
+}
+
+.top-link-button:hover {
+    transform: scale(1.05);
+    box-shadow: 0 8px 22px rgba(2, 6, 23, 0.16);
+    opacity: 0.99;
+    background-color: #0e4f73;
+    /* un poco más claro al hover */
+}
+
+/* ===== Página de Diagramas (apidocs_diagramas.html) ===== */
+.apidocs-diagramas-page {
+    min-height: 100vh;
+    background: #02040A;
+    color: #EBF0F5;
+}
+
+.apidocs-diagramas-page .topbar {
+    padding: 12px 20px;
+    background: #072146;
+    color: #EBF0F5;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    box-shadow: 0 10px 30px rgba(2, 6, 23, 0.7);
+}
+
+.topbar-title-wrap {
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: #C7D2FE;
+}
+
+.diagramas-main {
+    max-width: 1200px;
+    margin: 24px auto 40px;
+    padding: 0 16px 40px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+}
+
+@media (min-width: 1024px) {
+    .diagramas-main {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.diagram-card {
+    background: radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), rgba(15, 23, 42, 0.98));
+    border-radius: 18px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.9);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.diagram-card__header {
+    padding: 18px 20px 12px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.diagram-card__header h2 {
+    margin: 0 0 4px;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.diagram-card__header p {
+    margin: 0;
+    font-size: 13px;
+    color: #9CA3AF;
+}
+
+.diagram-card__body {
+    padding: 14px 14px;
+    overflow: visible;
+    min-height: 260px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.diagram-card__body .mermaid {
+    background: rgba(15, 23, 42, 0.95);
+    border-radius: 12px;
+    padding: 12px;
+    border: 1px solid rgba(55, 65, 81, 0.7);
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.diagram-card__body .mermaid svg {
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto;
+    display: block;
+}
+
+/* Estado inicial: los diagramas están ocultos pero ocupan espacio */
+.mermaid-init-hidden {
+    visibility: hidden;
+}
+
+/* Cuando todo está listo, se muestran */
+.mermaid-init-visible {
+    visibility: visible;
+}
+
+   /* Modal fullscreen para diagramas */
+   .diagram-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  }
+  .diagram-modal-backdrop--visible {
+    display: flex;
+  }
+  .diagram-modal {
+    position: relative;
+    max-width: 95vw;
+    max-height: 90vh;
+    width: 95vw;
+    height: 90vh;
+    background: #020817;
+    border-radius: 12px;
+    box-shadow: 0 0 30px rgba(0,0,0,0.6);
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+  }
+  .diagram-modal__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #EBF0F5;
+    font-size: 0.95rem;
+    padding: 0.25rem 0.5rem 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+  .diagram-modal__title {
+    font-weight: 600;
+  }
+  .diagram-modal__close {
+    border: none;
+    background: transparent;
+    color: #EBF0F5;
+    font-size: 1.4rem;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .diagram-modal__demo-toggle {
+    background: linear-gradient(135deg, #0d47a1, #1976d2);
+    border: 1px solid rgba(144, 202, 249, 0.6);
+    color: #e3f2fd;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    box-shadow: 0 0 0 1px rgba(13, 71, 161, 0.4), 0 0 12px rgba(33, 150, 243, 0.35);
+    transition: background 0.2s ease, transform 0.12s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .diagram-modal__demo-toggle[aria-pressed="true"] {
+    background: linear-gradient(135deg, #1b5e20, #43a047);
+    border-color: rgba(200, 230, 201, 0.9);
+    box-shadow: 0 0 0 1px rgba(129, 199, 132, 0.7), 0 0 18px rgba(129, 199, 132, 0.5);
+  }
+  .diagram-modal__demo-toggle:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0 0 1px rgba(144, 202, 249, 0.8), 0 0 18px rgba(33, 150, 243, 0.6);
+  }
+  .diagram-modal__demo-toggle:active {
+    transform: translateY(0);
+    box-shadow: 0 0 0 1px rgba(13, 71, 161, 0.8), 0 0 10px rgba(13, 71, 161, 0.6);
+  }
+  .diagram-modal__body {
+    flex: 1;
+    background: radial-gradient(circle at top left, #0b3b60 0, #020817 55%);
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-start;   /* arriba */
+    justify-content: center;   /* centrado horizontal */
+    padding-top: 0.75rem;
+  }
+  .diagram-modal__svg-wrap {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+  }
+  .diagram-modal__svg-wrap svg {
+    max-width: 100%;
+    max-height: 100%;
+    width: auto;
+    height: auto;
+    display: block;
+  }
+
+  /* Botón de expandir en cada card */
+  .diagram-card__actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 0.25rem;
+  }
+  .diagram-card__fullscreen-btn {
+    border: none;
+    border-radius: 6px;
+    padding: 0.15rem 0.45rem;
+    font-size: 0.75rem;
+    cursor: pointer;
+    background: rgba(15, 118, 255, 0.15);
+    color: #cbd5f5;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .diagram-card__fullscreen-btn:hover {
+    background: rgba(37, 99, 235, 0.35);
+  }
+
+  /* Ajustes responsivos para los diagramas embebidos */
+  .diagram-card__body {
+    overflow: visible; /* evitamos que los controles se salgan visualmente */
+  }
+  .diagram-card__body .mermaid svg {
+    max-width: 100%;
+  }
+  /* Forzar que los controles de svg-pan-zoom queden pegados al borde derecho visible */
+  .svg-pan-zoom-control-container {
+    right: 6px !important;
+    top: 6px !important;
+  }
+  .svg-pan-zoom-control {
+    box-sizing: content-box;
+  }
+  @media (max-width: 900px) {
+    .diagram-card__body {
+      padding: 0.25e;
+    }
+  }
+
+/* Efectos de resaltado de nodos para la demo dinámica */
+
+svg .kibo-demo-highlight rect,
+svg g.kibo-demo-highlight rect,
+svg .kibo-demo-highlight path,
+svg g.kibo-demo-highlight path {
+  stroke: #ffeb3b !important;
+  stroke-width: 3px !important;
+  fill: rgba(255, 235, 59, 0.15) !important;
+}
+
+svg .kibo-demo-highlight text,
+svg g.kibo-demo-highlight text {
+  fill: #fffde7 !important;
+  font-weight: 600;
+}
+
+@keyframes kiboPulse {
+  0% { transform: scale(1); filter: drop-shadow(0 0 0px rgba(255, 235, 59, 0.0)); }
+  50% { transform: scale(1.04); filter: drop-shadow(0 0 10px rgba(255, 235, 59, 0.7)); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 0px rgba(255, 235, 59, 0.0)); }
+}
+
+svg .kibo-demo-pulse,
+svg g.kibo-demo-pulse {
+  animation: kiboPulse 0.8s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+svg .kibo-demo-label rect {
+  shape-rendering: geometricPrecision;
+}
+
+svg .kibo-demo-label text {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
