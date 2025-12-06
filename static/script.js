@@ -83,17 +83,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.showToast = showToast;
 
     // --- EFECTO DE ESCRITURA (TYPEWRITER) ---
-    // Esta es la función que faltaba para la animación
     function typewriterEffect(element, text, speed = 15) {
         let i = 0;
-        element.textContent = ""; // Limpiar contenido inicial
+        element.textContent = "";
 
         function typing() {
             if (i < text.length) {
                 element.textContent += text.charAt(i);
                 i++;
 
-                // Auto-scroll para seguir el texto mientras se escribe
                 const chatArea = document.querySelector('.chat-area');
                 if (chatArea) {
                     chatArea.scrollTop = chatArea.scrollHeight;
@@ -104,7 +102,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         typing();
     }
-    // Hacemos la función accesible globalmente por si acaso
     window.typewriterEffect = typewriterEffect;
 
 
@@ -252,7 +249,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // --- FIN LÓGICA DE MONITOREO Y VINCULACIÓN ---
 
     auth.onAuthStateChanged(async (user) => {
         const currentPath = window.location.pathname;
@@ -1670,20 +1666,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             const chatRef = db.collection('chats').doc(currentChatId);
             chatRef.collection('messages').add(messageData)
                 .then(() => {
-                    // Disparar demo dinámica: mensaje de usuario (misma pestaña)
                     try {
                         console.log('[KIBO-DEMO] Dispatch desde chat (usuario):', { input: texto });
                         const payload = { input: texto };
                         window.dispatchEvent(new CustomEvent('kibo-demo-mensaje', { detail: payload }));
-                        // Propagar a otras pestañas mediante localStorage
                         localStorage.setItem('kibo-demo-last', JSON.stringify({
                             type: 'user',
                             at: Date.now(),
                             data: payload
                         }));
-                        // Limpieza rápida para evitar cola de eventos antiguos
                         setTimeout(() => {
-                            try { localStorage.removeItem('kibo-demo-last'); } catch (_) {}
+                            try { localStorage.removeItem('kibo-demo-last'); } catch (_) { }
                         }, 100);
                     } catch (e) {
                         console.error('[KIBO-DEMO] Error al hacer dispatch de evento usuario:', e);
@@ -1721,7 +1714,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         async function llamarApiDelBot(userText, chatId) {
             try {
-                await fetch('/api/get_bot_response', {
+                const response = await fetch('/api/get_bot_response', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -1731,8 +1724,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                         chatId: chatId
                     })
                 });
+
+                if (response.ok) {
+                    const clone = response.clone();
+                    const data = await clone.json();
+
+                    if (data && data.intent) {
+                        console.log("✅ Intent capturado para el diagrama:", data.intent);
+
+                        localStorage.setItem('kibo_last_intent', data.intent);
+                    }
+                }
+
             } catch (error) {
-                console.error(error);
+                console.error("Error llamando a la API del Bot:", error);
             }
         }
 
@@ -1775,7 +1780,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const downloadURL = await snapshot.ref.getDownloadURL();
 
                 let contentType = 'file';
-                let isDocument = false; 
+                let isDocument = false;
 
                 if (file.type.startsWith('image/')) {
                     contentType = 'image';
@@ -1785,7 +1790,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     file.name.includes('.doc') ||
                     file.name.includes('.docx')) {
                     contentType = 'file';
-                    isDocument = true; 
+                    isDocument = true;
                 }
 
                 const userMessageData = {
@@ -2042,7 +2047,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         data: payload
                     }));
                     setTimeout(() => {
-                        try { localStorage.removeItem('kibo-demo-last'); } catch (_) {}
+                        try { localStorage.removeItem('kibo-demo-last'); } catch (_) { }
                     }, 100);
                 } catch (e) {
                     console.error('[KIBO-DEMO] Error al hacer dispatch de evento bot:', e);

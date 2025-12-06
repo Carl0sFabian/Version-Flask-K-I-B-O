@@ -4,7 +4,7 @@ import requests
 import firebase_admin
 from firebase_admin import credentials, firestore, auth
 from flask import Flask, render_template, request, jsonify, url_for
-from flasgger import Swagger  
+from flasgger import Swagger
 import joblib
 import random
 import traceback
@@ -29,10 +29,8 @@ from conocimiento import (
     normalizar_texto
 )
 
-
 app = Flask(__name__)
 
-# --- CONFIGURACIÓN SWAGGER ---
 swagger_config = {
     "headers": [],
     "specs": [
@@ -51,14 +49,15 @@ swagger_config = {
     "description": "Documentación interactiva de los endpoints del Asistente IA"
 }
 
-swagger = Swagger(app, config=swagger_config)
-
+try:
+    swagger = Swagger(app, config=swagger_config)
+except:
+    swagger = Swagger(app)
 
 @app.route('/apidocs/')
 def apidocs_custom():
     return render_template('apidocs_custom.html')
 
-# Nuevo endpoint que muestra solo la palabra 'hola' en /apidocs/diagramas
 @app.route('/apidocs/diagramas')
 def apidocs_diagramas():
     return render_template('apidocs_diagramas.html')
@@ -67,7 +66,6 @@ INITIAL_CLASSIFICATION_THRESHOLD = 0.03
 db = None
 clf_intenciones = None
 
-# --- INICIALIZACIÓN FIREBASE ---
 try:
     firebase_cred_json_str = os.environ.get('FIREBASE_CREDENTIALS_JSON')
     if firebase_cred_json_str:
@@ -89,8 +87,7 @@ except Exception as e:
     print(f"Detalle del error: {e}")
     db = None
 
-# --- DESCARGA RECURSOS NLTK ---
-print("Descargando recursos de NLTK (punkt y punkt_tab)...")
+print("Descargando recursos de NLTK...")
 try:
     nltk.data.find('tokenizers/punkt')
 except LookupError:
@@ -101,7 +98,6 @@ except LookupError:
     nltk.download('punkt_tab')
 print("Recursos de NLTK listos.")
 
-# --- CARGA CLASIFICADOR INTENCIONES ---
 print("Cargando clasificador de intenciones...")
 try:
     clf_intenciones = joblib.load("intent_classifier.joblib")
@@ -111,7 +107,6 @@ except Exception as e:
     clf_intenciones = None
 
 
-# --- FUNCIONES AUXILIARES ---
 
 def leer_script_entrenamiento():
     script_path = 'entrenar_modelos.py'
@@ -131,9 +126,12 @@ def leer_script_entrenamiento():
 def _generate_and_save_bot_response(user_text, chat_id):
     if db is None:
         print("!! ERROR FATAL (Helper): La conexión con Firestore no está disponible.")
-        return
+        return "Error de conexión con base de datos.", "error_bd"
 
     start_time_internal = time.time()
+    bot_response_text = ""
+    intent_detected_name = "desconocido" 
+
     try:
         print(f"\n--- [Generando respuesta para ChatID: {chat_id}] ---")
         print(f"Texto de entrada: {user_text}")
@@ -145,11 +143,12 @@ def _generate_and_save_bot_response(user_text, chat_id):
             
             if user_text != "[RUIDO_DETECTADO]" and clf_intenciones and MODELOS_CARGADOS:
                 normalized_user_text_metrics = normalizar_texto(user_text)
-                intent_raw, _ = clasificar_intencion(normalized_user_text_metrics, umbral=INITIAL_CLASSIFICATION_THRESHOLD)
-                if intent_raw:
-                    if 'python' in intent_raw or 'py' in intent_raw: topic_for_metrics = "python"
-                    elif 'database' in intent_raw or 'sql' in intent_raw: topic_for_metrics = "database"
-                    elif 'algoritmo' in intent_raw: topic_for_metrics = "algoritmos"
+                intent_raw_m, _ = clasificar_intencion(normalized_user_text_metrics, umbral=INITIAL_CLASSIFICATION_THRESHOLD)
+                if intent_raw_m:
+                    intent_str_m = str(intent_raw_m).lower()
+                    if 'python' in intent_str_m or 'py' in intent_str_m: topic_for_metrics = "python"
+                    elif 'database' in intent_str_m or 'sql' in intent_str_m: topic_for_metrics = "database"
+                    elif 'algoritmo' in intent_str_m: topic_for_metrics = "algoritmos"
             
             metrics_ref.set({
                 'totalQueries': firestore.Increment(1),
@@ -158,10 +157,9 @@ def _generate_and_save_bot_response(user_text, chat_id):
         except Exception as metrics_e:
             print(f"!! ADVERTENCIA: No se pudo actualizar métricas: {metrics_e}")
 
-        bot_response_text = ""
-        
         if user_text == "[RUIDO_DETECTADO]" or user_text == "[No se pudo entender el audio]":
             bot_response_text = "Escuché mucho ruido de fondo o no detecté una voz clara. Por favor, intenta de nuevo."
+            intent_detected_name = "ruido"
         
         else:
             intent = None
@@ -173,6 +171,9 @@ def _generate_and_save_bot_response(user_text, chat_id):
                 
                 if intent_raw:
                     print(f"Intención detectada -> {intent_raw} (Confianza: {score:.2f})")
+                    
+                    intent_str = str(intent_raw)
+                    
                     CONVERSATIONAL_INTENTS = [
                         'saludo', 'despedida', 'agradecimiento', 'error', 'desconocido','pedir_objeto', 
                         'pedir_ayuda', 'expresar_gustos','pedir_permiso_para_jugar', 'pedir_permiso_para_baño',
@@ -186,10 +187,12 @@ def _generate_and_save_bot_response(user_text, chat_id):
                         'pedir_silencio', 'hablar_de_actividad_preferida', 'preguntar_por_comida', 
                         'hablar_de_juego_favorito', 'expresar_hambre', 'expresar_sed', 'pedir_info_adicional', 
                         'jergas_amigos', 'jergas_deportes', 'hablar_de_tareas', 'hacer_una_pregunta_personal'
-                    ] 
+                    ]
                     
-                    if intent_raw in CONVERSATIONAL_INTENTS:
-                        intent = intent_raw
+                    if intent_str in CONVERSATIONAL_INTENTS:
+                        intent = intent_str
+                        intent_detected_name = intent_str # Capturamos el nombre exacto
+                        
                         respuesta_simple = responder_por_intencion(intent, normalized_user_text)
                         
                         if intent == 'saludo':
@@ -200,13 +203,16 @@ def _generate_and_save_bot_response(user_text, chat_id):
                             bot_response_text = "No estoy seguro de cómo responder a eso, ¿puedes intentarlo de otra manera?"
                     else: 
                         print(f"Intención técnica detectada. Pasando a Q&A.")
-                
+            
             if not bot_response_text:
                 if not MODELOS_CARGADOS:
                     bot_response_text = "Lo siento, tengo problemas para acceder a la base de conocimiento." 
                 else:
                     print("Consultando modelo Q&A...")
                     bot_response_text = obtener_respuesta_py(user_text) 
+                    
+                    if intent_detected_name == "desconocido":
+                        intent_detected_name = "consulta_base_datos"
 
         chat_ref = db.collection('chats').document(chat_id)
         
@@ -276,6 +282,10 @@ def _generate_and_save_bot_response(user_text, chat_id):
         print(f"Mensaje guardado en Firestore.")
         end_time_internal = time.time()
         print(f"--- [TIEMPO TOTAL IA]: {end_time_internal - start_time_internal:.4f}s ---")
+        
+        print(f"DEBUG APP: Intent devuelto -> '{intent_detected_name}'")
+
+        return bot_response_text, intent_detected_name
 
     except Exception as e:
         print(f"\n--- [ERROR RESPONDING] --- {e}")
@@ -289,6 +299,7 @@ def _generate_and_save_bot_response(user_text, chat_id):
                 'contentType': 'text',
                 'rating': 0
             })
+        return "Error interno", "error_interno"
 
 def _update_response_metrics(response_time, success=True):
     try:
@@ -323,7 +334,6 @@ def _update_response_metrics(response_time, success=True):
     except Exception as e:
         print(f"!! ADVERTENCIA: No se pudo actualizar métricas de respuesta: {e}")
 
-# --- RUTAS ---
 @app.route('/api/process_document', methods=['POST'])
 def process_document():
     """
@@ -366,13 +376,6 @@ def process_document():
     temp_path = ""
 
     try:
-        data = request.json
-        file_url = data.get('fileUrl')
-        file_type = data.get('fileType')
-
-        if not file_url:
-            return jsonify({"status": "error", "message": "Falta URL"}), 400
-
         headers = {'User-Agent': 'Mozilla/5.0'}
         response = requests.get(file_url, headers=headers, timeout=15)
         
@@ -404,7 +407,6 @@ def process_document():
             return jsonify({"status": "success", "summary": "No pude leer texto de este archivo (quizás es una imagen escaneada)."}), 200
 
         summary = text_content[:400] + "..."
-        
         respuesta_bot = f"📄 **He leído tu archivo.** Aquí tienes un pequeño resumen:\n\n_{summary}_"
 
         return jsonify({"status": "success", "summary": respuesta_bot}), 200
@@ -527,16 +529,12 @@ def index_desarrollador():
 def index():
     return render_template('index.html')
 
-
 @app.route('/login')
 def login():
     return render_template('login.html')
 
 @app.route('/tos')
 def terms_of_service():
-    """
-    Muestra la página de Términos de Servicio y documentación del proyecto.
-    """
     return render_template('tos.html')
 
 @app.route('/api/get_bot_response', methods=['POST'])
@@ -585,12 +583,24 @@ def handle_chat_message():
         if not user_text or not chat_id:
             return jsonify({"error": "Faltan parámetros 'text' o 'chatId'"}), 400
 
-        _generate_and_save_bot_response(user_text, chat_id)
+        bot_text, intent_name = _generate_and_save_bot_response(user_text, chat_id)
 
         response_time = time.time() - start_time
         _update_response_metrics(response_time, success=True)
         
-        return jsonify({"status": "success", "response_saved": True}), 200
+        if not intent_name:
+            intent_name = "desconocido"
+        
+        intent_name = str(intent_name)
+
+        print(f"--> ENVIANDO JSON: Intent='{intent_name}'")
+
+        return jsonify({
+            "status": "success", 
+            "response_saved": True,
+            "intent": intent_name, 
+            "text": bot_text
+        }), 200
 
     except Exception as e:
         response_time = time.time() - start_time
@@ -598,6 +608,7 @@ def handle_chat_message():
         print(f"\n--- [ERROR INESPERADO EN /api/get_bot_response] ---")
         traceback.print_exc()
         return jsonify({"error": "Ocurrió un error interno en el servidor."}), 500
+
 
 @app.route('/api/process_audio', methods=['POST'])
 def process_audio():
@@ -661,19 +672,16 @@ def process_audio():
 
         print(f"Descargando audio de: {audio_url}")
         
-        # --- CORRECCIÓN AQUÍ: AGREGAMOS USER-AGENT ---
-        # Esto engaña al servidor para que crea que somos un navegador
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
         }
         
         try:
-            # Pasamos los headers aquí
             response = requests.get(audio_url, headers=headers, timeout=10) 
             response.raise_for_status()
         except Exception as download_error:
             print(f"Error descargando: {download_error}")
-            return jsonify({"error": f"No se pudo descargar el audio. El servidor bloqueó la conexión o el enlace está roto. Error: {str(download_error)}"}), 400
+            return jsonify({"error": f"No se pudo descargar el audio. Error: {str(download_error)}"}), 400
         
         temp_dir = tempfile.gettempdir() 
         temp_path = os.path.join(temp_dir, f"{message_id}.webm")
@@ -697,7 +705,8 @@ def process_audio():
         del model
         gc.collect()
         if os.path.exists(temp_path):
-            os.remove(temp_path)
+            try: os.remove(temp_path)
+            except: pass
 
         db.collection('chats').document(chat_id).collection('messages').document(message_id).set({
             "text": transcribed_text
@@ -714,6 +723,7 @@ def process_audio():
             try: os.remove(temp_path)
             except: pass
         return jsonify({"status": "error", "message": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
